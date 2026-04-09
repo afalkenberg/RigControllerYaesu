@@ -8,247 +8,245 @@
 *{box-sizing:border-box;margin:0;padding:0;user-select:none}
 :root{
   --bg:#0c0c0c;--panel:#141414;--border:#222;--border2:#2a2a2a;
-  --amber:#e8a020;--amber2:#f5c060;--amber-dim:#3a2800;
+  --amber:#e8a020;--amber2:#f5c060;--amber-dim:#2a1800;
   --green:#18d060;--green-dim:#0a2a10;
   --red:#e03020;--red-dim:#2a0800;
   --blue:#2090ff;--blue-dim:#082040;
   --cyan:#10c8c8;--cyan-dim:#082020;
+  --purple:#a060e0;--purple-dim:#1a0a30;
   --txt:#b8a870;--txt2:#504830;--txt3:#807050;
   --knob:#1e1e1e;--knob2:#282828;
-  --seg-on:#e8a020;--seg-off:#1a1200;
 }
 body{background:var(--bg);font-family:'Courier New',monospace;
-  color:var(--txt);min-height:100vh;padding:12px;
-  display:flex;flex-direction:column;align-items:center;gap:8px}
+  color:var(--txt);min-height:100vh;padding:10px;
+  display:flex;flex-direction:column;align-items:center;gap:6px}
 
-/* ── FREQ MODAL ──────────────────────────────── */
-#overlay{display:none;position:fixed;inset:0;background:#000b;z-index:999;
+/* ── FREQ MODAL ── */
+#overlay{display:none;position:fixed;inset:0;background:#000c;z-index:999;
   align-items:center;justify-content:center}
 #overlay.show{display:flex}
 #fmodal{background:#111;border:1px solid #3a3010;border-radius:8px;
-  padding:20px;min-width:320px;display:flex;flex-direction:column;gap:12px}
-#fmodal h3{font-size:11px;letter-spacing:4px;color:var(--amber)}
+  padding:20px;min-width:300px;display:flex;flex-direction:column;gap:10px}
+#fmodal h3{font-size:10px;letter-spacing:4px;color:var(--amber)}
 #fmodal input{background:#0a0a06;border:1px solid #3a3010;border-radius:4px;
-  color:var(--amber);font-size:26px;font-family:inherit;padding:8px 12px;
-  text-align:center;width:100%}
-.mbtn{flex:1;background:var(--knob);border:1px solid #3a3010;border-radius:4px;
-  color:var(--amber);font-family:inherit;font-size:11px;font-weight:700;
-  padding:8px;cursor:pointer;letter-spacing:2px}
+  color:var(--amber);font-size:24px;font-family:inherit;padding:6px 10px;text-align:center;width:100%}
+.mbtn{flex:1;background:var(--knob);border:1px solid #3a3010;border-radius:3px;
+  color:var(--amber);font-family:inherit;font-size:10px;font-weight:700;
+  padding:6px;cursor:pointer;letter-spacing:2px}
 .mbtn.ok{background:#1a1000;color:var(--amber2)}
 
-/* ── TOP HEADER ──────────────────────────────── */
-#header{width:100%;max-width:1400px;background:#101008;
-  border:1px solid #2a2500;border-radius:8px;
-  display:flex;align-items:center;gap:12px;padding:8px 16px}
-#logo{display:flex;flex-direction:column;line-height:1;min-width:90px}
-#logo .brand{font-size:20px;font-weight:700;letter-spacing:4px;color:var(--amber)}
-#logo .model{font-size:10px;letter-spacing:6px;color:var(--txt2)}
-#logo .tag{font-size:8px;letter-spacing:2px;color:var(--txt2);margin-top:1px}
-
-/* ── DUAL VFO DISPLAY ────────────────────────── */
-#vfo-row{flex:1;display:flex;gap:8px}
-.vfo-display{flex:1;background:#08080400;border:1px solid #2a2500;border-radius:6px;
-  padding:6px 12px;display:flex;flex-direction:column;gap:2px}
-.vfo-display.main-disp{border-color:#3a3010}
-.vfo-top{display:flex;align-items:center;gap:8px}
-.vfo-tag{font-size:8px;letter-spacing:3px;padding:2px 6px;border-radius:3px;
-  font-weight:700}
-.vfo-tag.main{background:#2a1800;color:var(--amber)}
-.vfo-tag.sub{background:#082028;color:var(--cyan)}
-.vfo-freq{font-size:32px;font-weight:700;letter-spacing:2px;cursor:pointer;
-  transition:color .1s;line-height:1}
-.vfo-display.main-disp .vfo-freq{color:var(--amber)}
-.vfo-display.sub-disp .vfo-freq{color:var(--cyan);font-size:24px}
-.vfo-freq:hover{opacity:.75}
-.vfo-bottom{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.vfo-mode-badge{font-size:11px;letter-spacing:3px;font-weight:700;
-  padding:1px 6px;border-radius:3px}
-.main-disp .vfo-mode-badge{color:var(--cyan);background:#082028}
-.sub-disp .vfo-mode-badge{color:var(--green);background:#082010}
-.vfo-band-badge{font-size:10px;color:var(--txt2);letter-spacing:2px;
-  border:1px solid #2a2a2a;padding:1px 5px;border-radius:3px}
-
-/* TX / RX pill */
-#tx-pill{min-width:52px;height:100%;display:flex;flex-direction:column;
-  gap:4px;align-items:center;justify-content:center}
-#tx-ind{background:var(--red-dim);border:1px solid #300;border-radius:4px;
-  font-size:12px;font-weight:700;color:#400;padding:4px 10px;letter-spacing:3px;
-  transition:all .1s;text-align:center;width:100%}
-#tx-ind.on{background:var(--red);color:#fff;border-color:#f44}
-#split-ind{font-size:9px;color:var(--txt2);letter-spacing:2px;text-align:center}
-
-/* ── METERS BAR ──────────────────────────────── */
-#meters{width:100%;max-width:1400px;background:#090d09;
-  border:1px solid #1a2a1a;border-radius:6px;
-  padding:6px 14px;display:flex;flex-direction:column;gap:5px}
-.meter-row{display:flex;gap:10px;align-items:center}
-.mblock{flex:1;display:flex;flex-direction:column;gap:2px}
-.mlabel{font-size:8px;letter-spacing:2px;color:var(--txt2);
-  display:flex;justify-content:space-between;align-items:center}
-.mlabel .mvtag{font-size:7px;padding:0 3px;border-radius:2px}
-.mlabel .mvtag.m{background:var(--amber-dim);color:var(--amber)}
-.mlabel .mvtag.s{background:var(--cyan-dim);color:var(--cyan)}
-.mbar{height:10px;background:#0a1a0a;border:1px solid #1a2a1a;border-radius:2px;
-  overflow:hidden;position:relative}
-.mfill{height:100%;width:0%;transition:width .12s;border-radius:2px}
-.mfill.sm{background:linear-gradient(90deg,#18d060 0%,#18d060 50%,#a0d000 70%,#e08000 85%,#e03000 100%)}
-.mfill.ss{background:linear-gradient(90deg,#10c8c8 0%,#10c8c8 50%,#20a0e0 70%,#e08000 85%,#e03000 100%)}
-.mfill.po{background:linear-gradient(90deg,#2090ff 0%,#2090ff 70%,#e08000 88%,#e03000 100%)}
-.mfill.alc{background:#10c8c8}
-.mfill.swr{background:linear-gradient(90deg,#18d060 0%,#18d060 40%,#e0a000 65%,#e03000 85%)}
-.mfill.idd{background:#2090ff}
-.mfill.vdd{background:#e8a020}
-.mfill.comp{background:#d060d0}
-.mval{font-size:9px;color:var(--txt2);min-width:40px;text-align:right}
-.mticks{display:flex;justify-content:space-between;font-size:7px;color:var(--txt2);opacity:.4}
-.mrow-label{font-size:8px;letter-spacing:3px;color:var(--txt2);
-  padding:2px 0;border-bottom:1px solid #1a2a1a;margin-bottom:2px}
-
-/* ── MAIN LAYOUT: 3 columns ──────────────────── */
-#body{width:100%;max-width:1400px;display:grid;
-  grid-template-columns:180px 1fr 180px;gap:6px}
-
-/* ── PANEL SHARED ────────────────────────────── */
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;
-  display:flex;flex-direction:column;gap:0}
-.psec{padding:8px;border-bottom:1px solid var(--border)}
+/* ── SHARED PANEL ── */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:5px;
+  display:flex;flex-direction:column}
+.psec{padding:6px;border-bottom:1px solid var(--border)}
 .psec:last-child{border-bottom:none}
-.ptitle{font-size:8px;letter-spacing:3px;color:var(--txt2);margin-bottom:5px;
-  display:flex;align-items:center;gap:4px}
-.ptitle .sub-tag{font-size:7px;color:var(--cyan);letter-spacing:1px;
-  background:var(--cyan-dim);padding:1px 4px;border-radius:2px}
-.ptitle .main-tag{font-size:7px;color:var(--amber);letter-spacing:1px;
-  background:var(--amber-dim);padding:1px 4px;border-radius:2px}
+.ptitle{font-size:7px;letter-spacing:3px;color:var(--txt2);margin-bottom:4px;
+  display:flex;align-items:center;gap:3px}
+.tag-m{font-size:7px;background:var(--amber-dim);color:var(--amber);
+  padding:0 3px;border-radius:2px;letter-spacing:1px}
+.tag-s{font-size:7px;background:var(--cyan-dim);color:var(--cyan);
+  padding:0 3px;border-radius:2px;letter-spacing:1px}
 
-/* ── BAND / MODE BUTTONS ─────────────────────── */
-.band-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.bbtn{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  font-size:9px;font-weight:700;letter-spacing:1px;padding:4px 2px;
-  cursor:pointer;text-align:center;transition:all .1s;font-family:inherit;color:var(--txt2)}
+/* ── HEADER ── */
+#header{width:100%;max-width:1440px;background:#101008;
+  border:1px solid #2a2500;border-radius:6px;
+  display:flex;align-items:center;gap:10px;padding:6px 14px}
+#logo{display:flex;flex-direction:column;line-height:1;min-width:80px}
+#logo .brand{font-size:18px;font-weight:700;letter-spacing:4px;color:var(--amber)}
+#logo .model{font-size:9px;letter-spacing:5px;color:var(--txt2)}
+#logo .tag{font-size:7px;letter-spacing:2px;color:var(--txt2);margin-top:1px}
+#vfo-row{flex:1;display:flex;gap:6px}
+.vfo-disp{flex:1;background:#08080400;border:1px solid #2a2500;border-radius:5px;padding:5px 10px}
+.vfo-disp.md{border-color:#3a3010}
+.vfo-top{display:flex;align-items:center;gap:6px}
+.vfo-tag{font-size:7px;letter-spacing:3px;padding:2px 5px;border-radius:2px;font-weight:700}
+.vfo-tag.m{background:var(--amber-dim);color:var(--amber)}
+.vfo-tag.s{background:var(--cyan-dim);color:var(--cyan)}
+.vfo-freq{font-size:28px;font-weight:700;letter-spacing:2px;cursor:pointer;line-height:1}
+.vfo-disp.md .vfo-freq{color:var(--amber)}
+.vfo-disp.sd .vfo-freq{color:var(--cyan);font-size:20px}
+.vfo-freq:hover{opacity:.7}
+.vfo-bot{display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap}
+.vmode{font-size:10px;letter-spacing:3px;font-weight:700;padding:1px 5px;border-radius:2px}
+.md .vmode{color:var(--cyan);background:var(--cyan-dim)}
+.sd .vmode{color:var(--green);background:var(--green-dim)}
+.vband{font-size:9px;color:var(--txt2);border:1px solid #2a2a2a;padding:0 4px;border-radius:2px}
+#tx-pill{display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;min-width:48px}
+#tx-ind{background:var(--red-dim);border:1px solid #300;border-radius:3px;
+  font-size:11px;font-weight:700;color:#400;padding:3px 8px;letter-spacing:3px;transition:all .1s;text-align:center}
+#tx-ind.on{background:var(--red);color:#fff;border-color:#f44}
+#split-ind{font-size:8px;color:var(--txt2);letter-spacing:2px}
+
+/* ── METERS ── */
+#meters{width:100%;max-width:1440px;background:#090d09;
+  border:1px solid #1a2a1a;border-radius:5px;padding:5px 12px;display:flex;flex-direction:column;gap:4px}
+.mrow{display:flex;gap:8px;align-items:center}
+.mblk{flex:1;display:flex;flex-direction:column;gap:1px}
+.mlbl{font-size:7px;letter-spacing:2px;color:var(--txt2);display:flex;justify-content:space-between}
+.mtag{font-size:6px;padding:0 2px;border-radius:2px}
+.mtag.m{background:var(--amber-dim);color:var(--amber)}
+.mtag.s{background:var(--cyan-dim);color:var(--cyan)}
+.mbar{height:9px;background:#0a1a0a;border:1px solid #1a2a1a;border-radius:2px;overflow:hidden}
+.mfill{height:100%;width:0%;transition:width .12s;border-radius:2px}
+.mfill.sm{background:linear-gradient(90deg,#18d060 50%,#a0d000 70%,#e08000 88%,#e03000 100%)}
+.mfill.ss{background:linear-gradient(90deg,#10c8c8 50%,#20a0e0 70%,#e08000 88%,#e03000 100%)}
+.mfill.po{background:linear-gradient(90deg,#2090ff 70%,#e08000 88%,#e03000 100%)}
+.mfill.alc{background:var(--cyan)}
+.mfill.swr{background:linear-gradient(90deg,#18d060 40%,#e0a000 65%,#e03000 85%)}
+.mfill.idd{background:var(--blue)}
+.mfill.vdd{background:var(--amber)}
+.mfill.comp{background:var(--purple)}
+.mval{font-size:8px;color:var(--txt2)}
+.mticks{display:flex;justify-content:space-between;font-size:6px;color:var(--txt2);opacity:.4}
+
+/* ── MAIN LAYOUT ── */
+#body{width:100%;max-width:1440px;display:grid;
+  grid-template-columns:160px 1fr 160px;gap:5px}
+
+/* ── BAND/MODE BUTTONS ── */
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.bbtn{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  font-size:8px;font-weight:700;letter-spacing:1px;padding:3px 2px;
+  cursor:pointer;text-align:center;font-family:inherit;color:var(--txt2);transition:all .1s}
 .bbtn:hover{background:#222;color:var(--txt)}
 .bbtn.am{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
 .bbtn.su{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.mmbtn{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  font-size:8px;font-weight:700;letter-spacing:1px;padding:3px 2px;
+  cursor:pointer;text-align:center;font-family:inherit;color:var(--txt2);transition:all .1s}
+.mmbtn:hover{background:#222;color:var(--txt)}
+.mmbtn.am{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
+.mmbtn.su{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
 
-.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.mbtn2{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  font-size:9px;font-weight:700;letter-spacing:1px;padding:4px 2px;
-  cursor:pointer;text-align:center;transition:all .1s;font-family:inherit;color:var(--txt2)}
-.mbtn2:hover{background:#222;color:var(--txt)}
-.mbtn2.am{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
-.mbtn2.su{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
+/* ── RF PATH (preamp/att/agc/dnf) ── */
+.rfgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
+.rfbtn{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  font-size:8px;font-weight:700;padding:3px 2px;cursor:pointer;
+  text-align:center;font-family:inherit;color:var(--txt2);transition:all .1s}
+.rfbtn:hover{background:#222;color:var(--txt)}
+.rfbtn.am{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
+.rfbtn.cy{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
+.rfbtn.gn{background:var(--green-dim);border-color:#0a3a1a;color:var(--green)}
+.rfbtn.rd{background:var(--red-dim);border-color:#3a1a1a;color:var(--red)}
 
-/* ── CENTER PANEL ────────────────────────────── */
-#center{display:flex;flex-direction:column;gap:6px}
+/* AGC row */
+.agcgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
 
-/* Dual knob rows */
-.knob-section{background:var(--panel);border:1px solid var(--border);border-radius:6px;
-  padding:8px 12px;display:flex;flex-direction:column;gap:6px}
-.knob-row{display:flex;gap:8px;justify-content:center;align-items:flex-end}
-.kblock{display:flex;flex-direction:column;align-items:center;gap:2px}
-.klabel{font-size:7px;letter-spacing:2px;color:var(--txt2);text-align:center}
-.kval{font-size:9px;color:var(--txt);min-width:28px;text-align:center}
-.kwrap{position:relative;width:48px;height:48px;cursor:ns-resize}
-.kwrap canvas{width:48px;height:48px}
-.kvfo{font-size:7px;letter-spacing:1px;text-align:center;padding:1px 4px;
-  border-radius:2px;margin-top:1px}
-.kvfo.m{color:var(--amber);background:var(--amber-dim)}
-.kvfo.s{color:var(--cyan);background:var(--cyan-dim)}
+/* ── CENTER ── */
+#center{display:flex;flex-direction:column;gap:5px}
+
+/* Knobs */
+.ksec{background:var(--panel);border:1px solid var(--border);border-radius:5px;
+  padding:6px 10px;display:flex;flex-direction:column;gap:4px}
+.krow{display:flex;gap:6px;justify-content:center;align-items:flex-end}
+.kblk{display:flex;flex-direction:column;align-items:center;gap:1px}
+.klbl{font-size:6px;letter-spacing:2px;color:var(--txt2);text-align:center}
+.kval{font-size:8px;color:var(--txt);min-width:26px;text-align:center}
+.kwrap{width:44px;height:44px;cursor:ns-resize}
+.kwrap canvas{width:44px;height:44px}
+.kvtag{font-size:6px;padding:0 3px;border-radius:2px;margin-top:1px}
+.kvtag.m{color:var(--amber);background:var(--amber-dim)}
+.kvtag.s{color:var(--cyan);background:var(--cyan-dim)}
 .ksep{width:1px;background:var(--border);align-self:stretch;margin:0 2px}
 
-/* DSP button grid */
-.dsp-section{background:var(--panel);border:1px solid var(--border);border-radius:6px;
-  padding:8px;display:flex;flex-direction:column;gap:6px}
-.dsp-row-label{font-size:8px;letter-spacing:3px;color:var(--txt2);
-  display:flex;align-items:center;gap:6px}
-.dsp-row-label::after{content:'';flex:1;height:1px;background:var(--border)}
-.dsp-grid{display:grid;gap:4px}
-.dsp-grid.cols6{grid-template-columns:repeat(6,1fr)}
-.dsp-grid.cols4{grid-template-columns:repeat(4,1fr)}
-.dsp-grid.cols3{grid-template-columns:repeat(3,1fr)}
-.dbtn{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  font-size:9px;font-weight:700;letter-spacing:1px;padding:5px 3px;
-  cursor:pointer;text-align:center;transition:all .1s;font-family:inherit;
-  color:var(--txt2);display:flex;flex-direction:column;align-items:center;gap:1px}
+/* DSP buttons */
+.dspsec{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:6px}
+.dsprow{display:flex;gap:3px;align-items:center;margin-bottom:3px}
+.dsplbl{font-size:7px;letter-spacing:2px;color:var(--txt2);white-space:nowrap;min-width:30px}
+.dbtn{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  font-size:8px;font-weight:700;padding:4px 5px;cursor:pointer;
+  text-align:center;font-family:inherit;color:var(--txt2);flex:1;transition:all .1s}
 .dbtn:hover{background:#222;color:var(--txt)}
-.dbtn .dvfo{font-size:7px;letter-spacing:0;opacity:.7}
 .dbtn.on-a{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
 .dbtn.on-g{background:var(--green-dim);border-color:#0a3a1a;color:var(--green)}
 .dbtn.on-c{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
 .dbtn.on-r{background:var(--red-dim);border-color:#3a1a1a;color:var(--red)}
 .dbtn.on-b{background:var(--blue-dim);border-color:#1a3a5a;color:var(--blue)}
+.dbtn.on-p{background:var(--purple-dim);border-color:#3a1a5a;color:var(--purple)}
 
-/* RIT/XIT */
-.rit-row{display:flex;gap:6px;align-items:center;padding:6px 8px;
-  background:var(--panel);border:1px solid var(--border);border-radius:6px}
-.rit-row label{font-size:9px;color:var(--txt2);letter-spacing:1px;white-space:nowrap}
-.rit-row input[type=range]{flex:1;accent-color:var(--amber)}
-.rit-row input[type=number]{width:65px;background:#0a0a0a;border:1px solid #2a2a00;
-  border-radius:3px;color:var(--amber);font-family:inherit;font-size:11px;padding:2px 4px;
-  text-align:center}
-.rit-clr{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  color:var(--txt2);font-family:inherit;font-size:9px;padding:4px 8px;cursor:pointer}
-
-/* VFO ops */
-.vfo-ops{display:flex;gap:4px;flex-wrap:wrap;padding:6px 8px;
-  background:var(--panel);border:1px solid var(--border);border-radius:6px}
-.vbtn{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  color:var(--txt2);font-size:9px;font-weight:700;letter-spacing:1px;
-  padding:5px 8px;cursor:pointer;font-family:inherit;transition:all .1s}
+/* RIT/VFO ops */
+.ritrow{display:flex;gap:5px;align-items:center;background:var(--panel);
+  border:1px solid var(--border);border-radius:5px;padding:5px 8px}
+.ritrow label{font-size:8px;color:var(--txt2);white-space:nowrap}
+.ritrow input[type=range]{flex:1;accent-color:var(--amber)}
+.ritrow input[type=number]{width:58px;background:#0a0a0a;border:1px solid #2a2a00;
+  border-radius:2px;color:var(--amber);font-family:inherit;font-size:10px;padding:1px 3px;text-align:center}
+.ritclr{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  color:var(--txt2);font-family:inherit;font-size:8px;padding:3px 6px;cursor:pointer}
+.vfops{display:flex;gap:3px;flex-wrap:wrap;background:var(--panel);
+  border:1px solid var(--border);border-radius:5px;padding:5px 8px}
+.vfops span{font-size:7px;letter-spacing:2px;color:var(--txt2);align-self:center}
+.vbtn{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  color:var(--txt2);font-size:8px;font-weight:700;letter-spacing:1px;
+  padding:4px 6px;cursor:pointer;font-family:inherit;transition:all .1s}
 .vbtn:hover{background:#222;color:var(--txt)}
-.vbtn.active{background:var(--cyan-dim);color:var(--cyan);border-color:#0a3a4a}
 
-/* ── RIGHT PANEL ─────────────────────────────── */
-/* PTT */
-#ptt{margin:8px;height:56px;border-radius:6px;border:2px solid #400;
-  background:#180000;color:#500;font-size:14px;font-weight:900;
-  letter-spacing:4px;cursor:pointer;transition:all .08s;font-family:inherit;
-  width:calc(100% - 16px)}
+/* ── RIGHT PANEL ── */
+#ptt{margin:6px;height:48px;border-radius:5px;border:2px solid #400;
+  background:#180000;color:#500;font-size:13px;font-weight:900;
+  letter-spacing:4px;cursor:pointer;font-family:inherit;transition:all .08s;
+  width:calc(100% - 12px)}
 #ptt:hover{background:#280000;color:#800}
 #ptt.on{background:var(--red);border-color:#f44;color:#fff}
-
-/* Power sliders */
-.slider-block{display:flex;flex-direction:column;gap:3px}
-.slider-block label{font-size:8px;letter-spacing:2px;color:var(--txt2);
+.slblk{display:flex;flex-direction:column;gap:2px}
+.slblk label{font-size:7px;letter-spacing:2px;color:var(--txt2);
   display:flex;justify-content:space-between}
-.slider-block input[type=range]{width:100%;accent-color:var(--amber)}
+.slblk input[type=range]{width:100%;accent-color:var(--amber)}
 .sval{color:var(--amber)}
 
-/* Preamp section — dual */
-.preamp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px}
-.prebtn{background:var(--knob);border:1px solid #252525;border-radius:3px;
-  font-size:9px;font-weight:700;padding:4px 2px;cursor:pointer;
-  text-align:center;font-family:inherit;transition:all .1s;color:var(--txt2)}
-.prebtn:hover{background:#222;color:var(--txt)}
-.prebtn.am{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
-.prebtn.cy{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
+/* ── BOTTOM SECTION: DSP + FILTERS ── */
+#bottom{width:100%;max-width:1440px;display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;gap:5px}
 
-/* ── CONNECT / RAW BAR ───────────────────────── */
-#connect-bar{width:100%;max-width:1400px;background:#0d0d0d;
-  border:1px solid var(--border);border-radius:6px;
-  display:flex;align-items:center;gap:8px;padding:6px 14px;flex-wrap:wrap}
-#connect-bar input[type=text],#connect-bar input[type=number]{
-  background:#0a0a0a;border:1px solid #2a2a2a;border-radius:3px;
-  color:var(--amber);font-family:inherit;font-size:11px;padding:3px 7px}
-#connect-bar input[type=text]{width:130px}
-#connect-bar input[type=number]{width:75px}
-.cbtn{background:#0a1a0a;border:1px solid #1a3a1a;border-radius:4px;
-  color:var(--green);font-family:inherit;font-size:11px;font-weight:700;
-  padding:4px 12px;cursor:pointer;letter-spacing:1px}
+/* Filter knob section */
+.fsec{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:6px}
+.ftitle{font-size:7px;letter-spacing:3px;color:var(--txt2);margin-bottom:5px;
+  display:flex;align-items:center;gap:3px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.frow{display:flex;gap:4px;align-items:flex-end;justify-content:center;margin-bottom:4px}
+.fslrow{display:flex;gap:4px;align-items:center;margin-bottom:3px}
+.fslrow label{font-size:7px;color:var(--txt2);min-width:50px;letter-spacing:1px}
+.fslrow input[type=range]{flex:1;accent-color:var(--cyan)}
+.fslrow span{font-size:8px;color:var(--cyan);min-width:38px;text-align:right}
+.fsel{display:flex;gap:2px}
+.fselb{background:var(--knob);border:1px solid #252525;border-radius:2px;
+  font-size:7px;font-weight:700;padding:2px 5px;cursor:pointer;
+  font-family:inherit;color:var(--txt2);transition:all .1s}
+.fselb:hover{background:#222;color:var(--txt)}
+.fselb.on{background:var(--cyan-dim);border-color:#0a3a4a;color:var(--cyan)}
+.fselb.onm{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
+
+/* Filter curve canvas */
+.fcurve{width:100%;height:80px;background:#050e05;border:1px solid #1a2a1a;
+  border-radius:3px;display:block;margin-bottom:4px}
+
+/* ── CONNECT / RAW ── */
+#cbar{width:100%;max-width:1440px;background:#0d0d0d;
+  border:1px solid var(--border);border-radius:5px;
+  display:flex;align-items:center;gap:6px;padding:5px 12px;flex-wrap:wrap}
+#cbar input[type=text],#cbar input[type=number]{
+  background:#0a0a0a;border:1px solid #2a2a2a;border-radius:2px;
+  color:var(--amber);font-family:inherit;font-size:10px;padding:2px 6px}
+#cbar input[type=text]{width:120px}
+#cbar input[type=number]{width:70px}
+.cbtn{background:#0a1a0a;border:1px solid #1a3a1a;border-radius:3px;
+  color:var(--green);font-family:inherit;font-size:10px;font-weight:700;
+  padding:3px 10px;cursor:pointer;letter-spacing:1px}
 .cbtn:hover{background:#102010}
-.cbtn.disc{background:#1a0a0a;border-color:#3a1a1a;color:var(--red)}
-#cstat{font-size:10px;letter-spacing:2px;padding:3px 8px;border-radius:3px;
+.cbtn.d{background:#1a0a0a;border-color:#3a1a1a;color:var(--red)}
+#cstat{font-size:9px;letter-spacing:2px;padding:2px 7px;border-radius:2px;
   background:#0a0a0a;border:1px solid #1a1a1a;color:var(--txt2)}
 #cstat.ok{color:var(--green);border-color:#1a3a1a;background:#001200}
 #cstat.err{color:var(--red);border-color:#3a1a1a;background:#120000}
-#raw-bar{width:100%;max-width:1400px;background:#090909;
-  border:1px solid var(--border);border-radius:6px;
-  display:flex;align-items:center;gap:8px;padding:5px 14px}
-#raw-bar input{flex:1;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:3px;
-  color:var(--cyan);font-family:inherit;font-size:11px;padding:3px 7px}
-.rbtn{background:#001a2a;border:1px solid #1a3a5a;border-radius:3px;
-  color:var(--blue);font-family:inherit;font-size:11px;font-weight:700;
-  padding:3px 10px;cursor:pointer;letter-spacing:1px}
-#raw-resp{font-size:10px;color:var(--txt2);padding-left:14px;min-height:14px}
+#rbar{width:100%;max-width:1440px;background:#090909;
+  border:1px solid var(--border);border-radius:5px;
+  display:flex;align-items:center;gap:6px;padding:4px 12px}
+#rbar input{flex:1;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:2px;
+  color:var(--cyan);font-family:inherit;font-size:10px;padding:2px 6px}
+.rbtn{background:#001a2a;border:1px solid #1a3a5a;border-radius:2px;
+  color:var(--blue);font-family:inherit;font-size:10px;font-weight:700;
+  padding:3px 9px;cursor:pointer}
+#rresp{font-size:9px;color:var(--txt2);padding-left:12px;min-height:12px}
 </style>
 </head>
 <body>
@@ -258,49 +256,44 @@ body{background:var(--bg);font-family:'Courier New',monospace;
   <div id="fmodal">
     <h3>SET FREQUENCY</h3>
     <input type="number" id="fminput" placeholder="14250000">
-    <div style="font-size:9px;color:var(--txt2);letter-spacing:1px">Hz — e.g. 14250000 = 14.250 MHz</div>
-    <div style="display:flex;gap:8px">
+    <div style="font-size:8px;color:var(--txt2)">Hz — e.g. 14250000 = 14.250 MHz</div>
+    <div style="display:flex;gap:6px">
       <button class="mbtn" onclick="closeModal()">CANCEL</button>
       <button class="mbtn ok" onclick="submitModal()">SET</button>
     </div>
   </div>
 </div>
 
-<!-- HEADER: logo + dual VFO display -->
+<!-- HEADER -->
 <div id="header">
   <div id="logo">
     <div class="brand">YAESU</div>
     <div class="model">FTX-1</div>
     <div class="tag">ALL MODE SDR</div>
   </div>
-
   <div id="vfo-row">
-    <!-- MAIN -->
-    <div class="vfo-display main-disp">
+    <div class="vfo-disp md">
       <div class="vfo-top">
-        <span class="vfo-tag main">MAIN</span>
+        <span class="vfo-tag m">MAIN</span>
         <div class="vfo-freq" id="fmain" onclick="openModal('MAIN')">14.250.000</div>
       </div>
-      <div class="vfo-bottom">
-        <span class="vfo-mode-badge" id="mmode">USB</span>
-        <span class="vfo-band-badge" id="mband">20m</span>
-        <span style="font-size:9px;color:var(--txt2)" id="mrit"></span>
+      <div class="vfo-bot">
+        <span class="vmode" id="mmode">USB</span>
+        <span class="vband" id="mband">20m</span>
+        <span style="font-size:8px;color:var(--txt2)" id="mrit"></span>
       </div>
     </div>
-    <!-- SUB -->
-    <div class="vfo-display sub-disp">
+    <div class="vfo-disp sd">
       <div class="vfo-top">
-        <span class="vfo-tag sub">SUB</span>
+        <span class="vfo-tag s">SUB</span>
         <div class="vfo-freq" id="fsub" onclick="openModal('SUB')">7.100.000</div>
       </div>
-      <div class="vfo-bottom">
-        <span class="vfo-mode-badge" id="smode">USB</span>
-        <span class="vfo-band-badge" id="sband">40m</span>
+      <div class="vfo-bot">
+        <span class="vmode" id="smode">USB</span>
+        <span class="vband" id="sband">40m</span>
       </div>
     </div>
   </div>
-
-  <!-- TX indicator -->
   <div id="tx-pill">
     <div id="tx-ind">RX</div>
     <div id="split-ind"></div>
@@ -309,64 +302,42 @@ body{background:var(--bg);font-family:'Courier New',monospace;
 
 <!-- METERS -->
 <div id="meters">
-  <!-- RX meters: dual S-meters -->
-  <div class="meter-row">
-    <div class="mblock" style="flex:2">
-      <div class="mlabel">S-METER <span class="mvtag m">MAIN</span> <span class="mval" id="smv">S0</span></div>
+  <div class="mrow">
+    <div class="mblk" style="flex:2">
+      <div class="mlbl">S-METER <span class="mtag m">MAIN</span> <span class="mval" id="smv">S0</span></div>
       <div class="mbar"><div class="mfill sm" id="smf"></div></div>
       <div class="mticks"><span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span>+10</span><span>+20</span><span>+40</span><span>+60</span></div>
     </div>
-    <div class="mblock" style="flex:2">
-      <div class="mlabel">S-METER <span class="mvtag s">SUB</span> <span class="mval" id="ssv">S0</span></div>
+    <div class="mblk" style="flex:2">
+      <div class="mlbl">S-METER <span class="mtag s">SUB</span> <span class="mval" id="ssv">S0</span></div>
       <div class="mbar"><div class="mfill ss" id="ssf"></div></div>
       <div class="mticks"><span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span>+10</span><span>+20</span><span>+40</span><span>+60</span></div>
     </div>
   </div>
-  <!-- TX meters -->
-  <div class="meter-row">
-    <div class="mblock">
-      <div class="mlabel">RF POWER <span class="mval" id="pov">—</span></div>
-      <div class="mbar"><div class="mfill po" id="pof"></div></div>
-    </div>
-    <div class="mblock">
-      <div class="mlabel">ALC <span class="mval" id="alv">—</span></div>
-      <div class="mbar"><div class="mfill alc" id="alf"></div></div>
-    </div>
-    <div class="mblock">
-      <div class="mlabel">COMP <span class="mval" id="compv">—</span></div>
-      <div class="mbar"><div class="mfill comp" id="compf"></div></div>
-    </div>
-    <div class="mblock">
-      <div class="mlabel">SWR <span class="mval" id="swv">—</span></div>
-      <div class="mbar"><div class="mfill swr" id="swf"></div></div>
-    </div>
-    <div class="mblock">
-      <div class="mlabel">IDD (A) <span class="mval" id="idv">—</span></div>
-      <div class="mbar"><div class="mfill idd" id="idf"></div></div>
-    </div>
-    <div class="mblock">
-      <div class="mlabel">VDD (V) <span class="mval" id="vddv">—</span></div>
-      <div class="mbar"><div class="mfill vdd" id="vddf"></div></div>
-    </div>
+  <div class="mrow">
+    <div class="mblk"><div class="mlbl">RF PWR <span class="mval" id="pov">—</span></div><div class="mbar"><div class="mfill po" id="pof"></div></div></div>
+    <div class="mblk"><div class="mlbl">ALC <span class="mval" id="alv">—</span></div><div class="mbar"><div class="mfill alc" id="alf"></div></div></div>
+    <div class="mblk"><div class="mlbl">COMP <span class="mval" id="compv">—</span></div><div class="mbar"><div class="mfill comp" id="compf"></div></div></div>
+    <div class="mblk"><div class="mlbl">SWR <span class="mval" id="swv">—</span></div><div class="mbar"><div class="mfill swr" id="swf"></div></div></div>
+    <div class="mblk"><div class="mlbl">IDD <span class="mval" id="idv">—</span></div><div class="mbar"><div class="mfill idd" id="idf"></div></div></div>
+    <div class="mblk"><div class="mlbl">VDD <span class="mval" id="vddv">—</span></div><div class="mbar"><div class="mfill vdd" id="vddf"></div></div></div>
   </div>
 </div>
 
-<!-- 3-COLUMN BODY -->
+<!-- 3-COL BODY -->
 <div id="body">
 
-  <!-- ── LEFT PANEL ── -->
+  <!-- LEFT PANEL -->
   <div class="panel">
-
-    <!-- MAIN BAND -->
     <div class="psec">
-      <div class="ptitle">BAND <span class="main-tag">MAIN</span></div>
-      <div class="band-grid" id="mband-grid">
+      <div class="ptitle">BAND <span class="tag-m">MAIN</span></div>
+      <div class="bgrid" id="mband-grid">
         <button class="bbtn" data-band="160m" data-vfo="MAIN">160m</button>
         <button class="bbtn" data-band="80m"  data-vfo="MAIN">80m</button>
         <button class="bbtn" data-band="60m"  data-vfo="MAIN">60m</button>
         <button class="bbtn" data-band="40m"  data-vfo="MAIN">40m</button>
         <button class="bbtn" data-band="30m"  data-vfo="MAIN">30m</button>
-        <button class="bbtn am active" data-band="20m" data-vfo="MAIN">20m</button>
+        <button class="bbtn am" data-band="20m" data-vfo="MAIN">20m</button>
         <button class="bbtn" data-band="17m"  data-vfo="MAIN">17m</button>
         <button class="bbtn" data-band="15m"  data-vfo="MAIN">15m</button>
         <button class="bbtn" data-band="12m"  data-vfo="MAIN">12m</button>
@@ -376,209 +347,144 @@ body{background:var(--bg);font-family:'Courier New',monospace;
         <button class="bbtn" data-band="70cm" data-vfo="MAIN" style="grid-column:span 2">70cm</button>
       </div>
     </div>
-
-    <!-- MAIN MODE -->
     <div class="psec">
-      <div class="ptitle">MODE <span class="main-tag">MAIN</span></div>
-      <div class="mode-grid" id="mmode-grid">
-        <button class="mbtn2" data-mode="LSB"    data-vfo="MAIN">LSB</button>
-        <button class="mbtn2 am active" data-mode="USB" data-vfo="MAIN">USB</button>
-        <button class="mbtn2" data-mode="CW"     data-vfo="MAIN">CW</button>
-        <button class="mbtn2" data-mode="CWR"    data-vfo="MAIN">CW-R</button>
-        <button class="mbtn2" data-mode="AM"     data-vfo="MAIN">AM</button>
-        <button class="mbtn2" data-mode="FM"     data-vfo="MAIN">FM</button>
-        <button class="mbtn2" data-mode="DATA-L" data-vfo="MAIN">D-L</button>
-        <button class="mbtn2" data-mode="DATA-U" data-vfo="MAIN">D-U</button>
-        <button class="mbtn2" data-mode="DATA-FM" data-vfo="MAIN">D-FM</button>
-        <button class="mbtn2" data-mode="C4FM"   data-vfo="MAIN">C4FM</button>
+      <div class="ptitle">MODE <span class="tag-m">MAIN</span></div>
+      <div class="mgrid" id="mmode-grid">
+        <button class="mmbtn" data-mode="LSB"    data-vfo="MAIN">LSB</button>
+        <button class="mmbtn am" data-mode="USB" data-vfo="MAIN">USB</button>
+        <button class="mmbtn" data-mode="CW"     data-vfo="MAIN">CW</button>
+        <button class="mmbtn" data-mode="CWR"    data-vfo="MAIN">CW-R</button>
+        <button class="mmbtn" data-mode="AM"     data-vfo="MAIN">AM</button>
+        <button class="mmbtn" data-mode="FM"     data-vfo="MAIN">FM</button>
+        <button class="mmbtn" data-mode="DATA-L" data-vfo="MAIN">D-L</button>
+        <button class="mmbtn" data-mode="DATA-U" data-vfo="MAIN">D-U</button>
+        <button class="mmbtn" data-mode="DATA-FM" data-vfo="MAIN">D-FM</button>
+        <button class="mmbtn" data-mode="C4FM"   data-vfo="MAIN">C4FM</button>
       </div>
     </div>
-
-    <!-- MAIN PREAMP -->
+    <!-- RF PATH MAIN -->
     <div class="psec">
-      <div class="ptitle">PREAMP <span class="main-tag">MAIN</span></div>
-      <div class="preamp-grid" id="mpre-grid">
-        <button class="prebtn am" data-pre="0" data-vfo="MAIN">IPO</button>
-        <button class="prebtn"    data-pre="1" data-vfo="MAIN">AMP1</button>
-        <button class="prebtn"    data-pre="2" data-vfo="MAIN">AMP2</button>
+      <div class="ptitle">RF PATH <span class="tag-m">MAIN</span></div>
+      <div style="font-size:7px;color:var(--txt2);margin-bottom:2px">PREAMP / IPO</div>
+      <div class="rfgrid" id="mpre">
+        <button class="rfbtn am" data-pre="0" data-vfo="MAIN">IPO</button>
+        <button class="rfbtn"    data-pre="1" data-vfo="MAIN">AMP1</button>
+        <button class="rfbtn"    data-pre="2" data-vfo="MAIN">AMP2</button>
+      </div>
+      <div style="display:flex;gap:2px;margin-top:3px">
+        <button class="rfbtn" id="att-m" style="flex:1" onclick="togRF('att_main')">ATT</button>
+        <button class="rfbtn" id="dnf-m" style="flex:1" onclick="togRF('dnf_main')">DNF</button>
+        <button class="rfbtn" id="nb-m"  style="flex:1" onclick="togRF('nb_main')">NB</button>
+        <button class="rfbtn" id="nr-m"  style="flex:1" onclick="togRF('nr_main')">NR</button>
+      </div>
+      <div style="font-size:7px;color:var(--txt2);margin:3px 0 2px">AGC</div>
+      <div class="agcgrid" id="magc">
+        <button class="rfbtn" data-agc="OFF"  data-vfo="MAIN">OFF</button>
+        <button class="rfbtn" data-agc="FAST" data-vfo="MAIN">FAST</button>
+        <button class="rfbtn" data-agc="MID"  data-vfo="MAIN">MID</button>
+        <button class="rfbtn am" data-agc="SLOW" data-vfo="MAIN">SLOW</button>
+        <button class="rfbtn" data-agc="AUTO" data-vfo="MAIN">AUTO</button>
       </div>
     </div>
+  </div>
 
-  </div><!-- /left panel -->
-
-  <!-- ── CENTER ── -->
+  <!-- CENTER -->
   <div id="center">
-
-    <!-- DUAL KNOBS -->
-    <div class="knob-section">
-      <div class="knob-row" id="knob-row-main">
-        <!-- AF MAIN -->
-        <div class="kblock">
-          <div class="klabel">AF GAIN</div>
-          <div class="kwrap" data-param="af_main" data-vfo="MAIN" data-min="0" data-max="255" data-val="128" data-color="#e8a020">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-af-main">128</div>
-          <div class="kvfo m">MAIN</div>
-        </div>
-        <!-- RF MAIN -->
-        <div class="kblock">
-          <div class="klabel">RF GAIN</div>
-          <div class="kwrap" data-param="rf_main" data-vfo="MAIN" data-min="0" data-max="255" data-val="255" data-color="#e8a020">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-rf-main">255</div>
-          <div class="kvfo m">MAIN</div>
-        </div>
-        <!-- SQ MAIN -->
-        <div class="kblock">
-          <div class="klabel">SQUELCH</div>
-          <div class="kwrap" data-param="sq_main" data-vfo="MAIN" data-min="0" data-max="255" data-val="0" data-color="#e8a020">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-sq-main">0</div>
-          <div class="kvfo m">MAIN</div>
-        </div>
-
+    <!-- KNOBS: gains for MAIN + SUB -->
+    <div class="ksec">
+      <div class="krow">
+        <div class="kblk"><div class="klbl">AF GAIN</div>
+          <div class="kwrap" data-p="af_main" data-mn="0" data-mx="255" data-v="128" data-c="#e8a020"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-af-main">128</div><div class="kvtag m">MAIN</div></div>
+        <div class="kblk"><div class="klbl">RF GAIN</div>
+          <div class="kwrap" data-p="rf_main" data-mn="0" data-mx="255" data-v="255" data-c="#e8a020"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-rf-main">255</div><div class="kvtag m">MAIN</div></div>
+        <div class="kblk"><div class="klbl">SQUELCH</div>
+          <div class="kwrap" data-p="sq_main" data-mn="0" data-mx="255" data-v="0" data-c="#e8a020"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-sq-main">0</div><div class="kvtag m">MAIN</div></div>
         <div class="ksep"></div>
-
-        <!-- AF SUB -->
-        <div class="kblock">
-          <div class="klabel">AF GAIN</div>
-          <div class="kwrap" data-param="af_sub" data-vfo="SUB" data-min="0" data-max="255" data-val="128" data-color="#10c8c8">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-af-sub">128</div>
-          <div class="kvfo s">SUB</div>
-        </div>
-        <!-- RF SUB -->
-        <div class="kblock">
-          <div class="klabel">RF GAIN</div>
-          <div class="kwrap" data-param="rf_sub" data-vfo="SUB" data-min="0" data-max="255" data-val="255" data-color="#10c8c8">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-rf-sub">255</div>
-          <div class="kvfo s">SUB</div>
-        </div>
-        <!-- SQ SUB -->
-        <div class="kblock">
-          <div class="klabel">SQUELCH</div>
-          <div class="kwrap" data-param="sq_sub" data-vfo="SUB" data-min="0" data-max="255" data-val="0" data-color="#10c8c8">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-sq-sub">0</div>
-          <div class="kvfo s">SUB</div>
-        </div>
-
+        <div class="kblk"><div class="klbl">AF GAIN</div>
+          <div class="kwrap" data-p="af_sub" data-mn="0" data-mx="255" data-v="128" data-c="#10c8c8"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-af-sub">128</div><div class="kvtag s">SUB</div></div>
+        <div class="kblk"><div class="klbl">RF GAIN</div>
+          <div class="kwrap" data-p="rf_sub" data-mn="0" data-mx="255" data-v="255" data-c="#10c8c8"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-rf-sub">255</div><div class="kvtag s">SUB</div></div>
+        <div class="kblk"><div class="klbl">SQUELCH</div>
+          <div class="kwrap" data-p="sq_sub" data-mn="0" data-mx="255" data-v="0" data-c="#10c8c8"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-sq-sub">0</div><div class="kvtag s">SUB</div></div>
         <div class="ksep"></div>
-
-        <!-- Notch freq -->
-        <div class="kblock">
-          <div class="klabel">NOTCH HZ</div>
-          <div class="kwrap" data-param="notch_freq" data-vfo="MAIN" data-min="0" data-max="4000" data-val="1000" data-color="#2090ff">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-notch">1000</div>
-          <div class="kvfo m">MAIN</div>
-        </div>
-        <!-- Filter width -->
-        <div class="kblock">
-          <div class="klabel">FILTER HZ</div>
-          <div class="kwrap" data-param="filter" data-vfo="MAIN" data-min="100" data-max="4000" data-val="2400" data-color="#d0b070">
-            <canvas width="48" height="48"></canvas>
-          </div>
-          <div class="kval" id="kv-filter">2400</div>
-          <div class="kvfo m">MAIN</div>
-        </div>
+        <div class="kblk"><div class="klbl">TX PWR</div>
+          <div class="kwrap" data-p="power" data-mn="0" data-mx="100" data-v="100" data-c="#e03020"><canvas width="44" height="44"></canvas></div>
+          <div class="kval" id="kv-power">100</div><div class="kvtag m">W</div></div>
       </div>
     </div>
 
-    <!-- DSP SECTION — MAIN -->
-    <div class="dsp-section">
-      <div class="dsp-row-label">DSP / RX <span class="main-tag" style="font-size:7px;padding:1px 4px;border-radius:2px;background:var(--amber-dim);color:var(--amber)">MAIN</span></div>
-      <div class="dsp-grid cols6">
-        <button class="dbtn" id="btn-nb-m" onclick="tog('nb_main','NB',true)">NB<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-nr-m" onclick="tog('nr_main','NR',true)">NR<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-an-m" onclick="tog('autonotch','AUTONOTCH',true)">A-NOTCH<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-mn-m" onclick="tog('mannotch','NOTCH',true)">NOTCH<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-att-m" onclick="tog('att_main','ATT',true)">ATT<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-lk-m" onclick="tog('lock_main','LOCK',true)">LOCK<span class="dvfo">MAIN</span></button>
+    <!-- DSP BUTTONS MAIN + SUB -->
+    <div class="dspsec">
+      <div class="dsprow">
+        <div class="dsplbl"><span class="tag-m">MAIN</span></div>
+        <button class="dbtn" id="btn-nb-m"  onclick="tog('nb_main')">NB</button>
+        <button class="dbtn" id="btn-nr-m"  onclick="tog('nr_main')">NR</button>
+        <button class="dbtn" id="btn-an-m"  onclick="tog('autonotch')">DNF</button>
+        <button class="dbtn" id="btn-mn-m"  onclick="tog('mannotch')">NOTCH</button>
+        <button class="dbtn" id="btn-att-m" onclick="tog('att_main')">ATT</button>
+        <button class="dbtn" id="btn-lk-m"  onclick="tog('lock_main')">LOCK</button>
+        <button class="dbtn" id="btn-sp"    onclick="tog('split')">SPLIT</button>
+        <button class="dbtn" id="btn-rit"   onclick="tog('rit')">RIT</button>
+        <button class="dbtn" id="btn-xit"   onclick="tog('xit')">XIT</button>
       </div>
-
-      <div class="dsp-row-label">DSP / RX <span class="sub-tag">SUB</span></div>
-      <div class="dsp-grid cols6">
-        <button class="dbtn" id="btn-nb-s" onclick="tog('nb_sub','NB',false)">NB<span class="dvfo">SUB</span></button>
-        <button class="dbtn" id="btn-nr-s" onclick="tog('nr_sub','NR',false)">NR<span class="dvfo">SUB</span></button>
-        <button class="dbtn" id="btn-an-s" onclick="tog('autonotch_sub','AUTONOTCH_SUB',false)">A-NOTCH<span class="dvfo">SUB</span></button>
-        <button class="dbtn" id="btn-mn-s" onclick="tog('mannotch_sub','NOTCH_SUB',false)">NOTCH<span class="dvfo">SUB</span></button>
-        <button class="dbtn" id="btn-att-s" onclick="tog('att_sub','ATT_SUB',false)">ATT<span class="dvfo">SUB</span></button>
-        <button class="dbtn" id="btn-lk-s" onclick="tog('lock_sub','LOCK_SUB',false)">LOCK<span class="dvfo">SUB</span></button>
-      </div>
-
-      <div class="dsp-row-label">TX / MISC</div>
-      <div class="dsp-grid cols6">
-        <button class="dbtn" id="btn-split" onclick="tog('split','SPLIT',true)">SPLIT<span class="dvfo">A/B</span></button>
-        <button class="dbtn" id="btn-rit"   onclick="tog('rit','RIT',true)">RIT<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" id="btn-xit"   onclick="tog('xit','XIT',true)">XIT<span class="dvfo">MAIN</span></button>
-        <button class="dbtn" onclick="api('tuner',{action:'start'})">TUN<span class="dvfo">START</span></button>
-        <button class="dbtn" onclick="api('tuner',{action:'stop'})">TUN<span class="dvfo">STOP</span></button>
-        <button class="dbtn" id="btn-fn" onclick="tog('fn','FN',true)">FINE<span class="dvfo">MAIN</span></button>
+      <div class="dsprow">
+        <div class="dsplbl"><span class="tag-s">SUB</span></div>
+        <button class="dbtn" id="btn-nb-s"  onclick="tog('nb_sub')">NB</button>
+        <button class="dbtn" id="btn-nr-s"  onclick="tog('nr_sub')">NR</button>
+        <button class="dbtn" id="btn-an-s"  onclick="tog('dnf_sub')">DNF</button>
+        <button class="dbtn" id="btn-mn-s"  onclick="tog('notch_sub')">NOTCH</button>
+        <button class="dbtn" id="btn-att-s" onclick="tog('att_sub')">ATT</button>
+        <button class="dbtn" id="btn-lk-s"  onclick="tog('lock_sub')">LOCK</button>
+        <button class="dbtn" onclick="api('tuner',{action:'start'})">TUN▶</button>
+        <button class="dbtn" onclick="api('tuner',{action:'stop'})">TUN■</button>
+        <button class="dbtn" id="btn-fn"    onclick="tog('fn')">FINE</button>
       </div>
     </div>
 
-    <!-- RIT/XIT -->
-    <div class="rit-row">
+    <!-- RIT -->
+    <div class="ritrow">
       <label>RIT/XIT</label>
       <input type="range" id="rit-sl" min="-9990" max="9990" step="10" value="0" oninput="ritChg(this.value)">
       <input type="number" id="rit-num" value="0" min="-9990" max="9990" step="10" onchange="ritChg(this.value)">
-      <span style="font-size:9px;color:var(--txt2)">Hz</span>
-      <button class="rit-clr" onclick="ritChg(0);document.getElementById('rit-sl').value=0">CLR</button>
+      <span style="font-size:8px;color:var(--txt2)">Hz</span>
+      <button class="ritclr" onclick="ritChg(0);document.getElementById('rit-sl').value=0">CLR</button>
     </div>
 
     <!-- VFO OPS -->
-    <div class="vfo-ops">
-      <span style="font-size:8px;letter-spacing:2px;color:var(--txt2)">VFO:</span>
+    <div class="vfops">
+      <span>VFO:</span>
       <button class="vbtn" onclick="api('vfo',{action:'toggle_ab'})">A/B</button>
       <button class="vbtn" onclick="api('vfo',{action:'swap'})">SWAP</button>
       <button class="vbtn" onclick="api('vfo',{action:'copy_main_sub'})">M→S</button>
       <button class="vbtn" onclick="api('vfo',{action:'copy_sub_main'})">S→M</button>
-      <span style="font-size:8px;letter-spacing:2px;color:var(--txt2);margin-left:8px">SCAN:</span>
-      <button class="vbtn" onclick="api('raw',{cmd:'SC1;'})">START</button>
-      <button class="vbtn" onclick="api('raw',{cmd:'SC0;'})">STOP</button>
-      <span style="font-size:8px;letter-spacing:2px;color:var(--txt2);margin-left:8px">MEMO:</span>
-      <button class="vbtn" onclick="api('raw',{cmd:'MA;'})">M→MAIN</button>
-      <button class="vbtn" onclick="api('raw',{cmd:'MB;'})">M→SUB</button>
+      <span style="margin-left:4px">SCAN:</span>
+      <button class="vbtn" onclick="api('raw',{cmd:'SC1;'})">▶</button>
+      <button class="vbtn" onclick="api('raw',{cmd:'SC0;'})">■</button>
+      <span style="margin-left:4px">MEM:</span>
+      <button class="vbtn" onclick="api('raw',{cmd:'MA;'})">→MAIN</button>
+      <button class="vbtn" onclick="api('raw',{cmd:'MB;'})">→SUB</button>
     </div>
+  </div>
 
-  </div><!-- /center -->
-
-  <!-- ── RIGHT PANEL ── -->
+  <!-- RIGHT PANEL -->
   <div class="panel">
-
-    <!-- PTT -->
     <button id="ptt"
       onmousedown="setPTT(true)" onmouseup="setPTT(false)"
-      ontouchstart="setPTT(true);event.preventDefault()" ontouchend="setPTT(false)">
-      PTT
-    </button>
+      ontouchstart="setPTT(true);event.preventDefault()" ontouchend="setPTT(false)">PTT</button>
 
-    <!-- TX POWER -->
     <div class="psec">
-      <div class="ptitle">TX POWER</div>
-      <div class="slider-block">
-        <label>POWER <span class="sval" id="pwr-val">100W</span></label>
-        <input type="range" id="pwr-sl" min="0" max="100" value="100" oninput="pwrChg(this.value)">
-      </div>
-    </div>
-
-    <!-- SUB BAND -->
-    <div class="psec">
-      <div class="ptitle">BAND <span class="sub-tag">SUB</span></div>
-      <div class="band-grid" id="sband-grid">
+      <div class="ptitle">BAND <span class="tag-s">SUB</span></div>
+      <div class="bgrid" id="sband-grid">
         <button class="bbtn" data-band="160m" data-vfo="SUB">160m</button>
         <button class="bbtn" data-band="80m"  data-vfo="SUB">80m</button>
         <button class="bbtn" data-band="60m"  data-vfo="SUB">60m</button>
-        <button class="bbtn su active" data-band="40m" data-vfo="SUB">40m</button>
+        <button class="bbtn su" data-band="40m" data-vfo="SUB">40m</button>
         <button class="bbtn" data-band="30m"  data-vfo="SUB">30m</button>
         <button class="bbtn" data-band="20m"  data-vfo="SUB">20m</button>
         <button class="bbtn" data-band="17m"  data-vfo="SUB">17m</button>
@@ -590,81 +496,216 @@ body{background:var(--bg);font-family:'Courier New',monospace;
         <button class="bbtn" data-band="70cm" data-vfo="SUB" style="grid-column:span 2">70cm</button>
       </div>
     </div>
-
-    <!-- SUB MODE -->
     <div class="psec">
-      <div class="ptitle">MODE <span class="sub-tag">SUB</span></div>
-      <div class="mode-grid" id="smode-grid">
-        <button class="mbtn2" data-mode="LSB"    data-vfo="SUB">LSB</button>
-        <button class="mbtn2 su active" data-mode="USB" data-vfo="SUB">USB</button>
-        <button class="mbtn2" data-mode="CW"     data-vfo="SUB">CW</button>
-        <button class="mbtn2" data-mode="CWR"    data-vfo="SUB">CW-R</button>
-        <button class="mbtn2" data-mode="AM"     data-vfo="SUB">AM</button>
-        <button class="mbtn2" data-mode="FM"     data-vfo="SUB">FM</button>
-        <button class="mbtn2" data-mode="DATA-L" data-vfo="SUB">D-L</button>
-        <button class="mbtn2" data-mode="DATA-U" data-vfo="SUB">D-U</button>
-        <button class="mbtn2" data-mode="DATA-FM" data-vfo="SUB">D-FM</button>
-        <button class="mbtn2" data-mode="C4FM"   data-vfo="SUB">C4FM</button>
+      <div class="ptitle">MODE <span class="tag-s">SUB</span></div>
+      <div class="mgrid" id="smode-grid">
+        <button class="mmbtn" data-mode="LSB"    data-vfo="SUB">LSB</button>
+        <button class="mmbtn su" data-mode="USB" data-vfo="SUB">USB</button>
+        <button class="mmbtn" data-mode="CW"     data-vfo="SUB">CW</button>
+        <button class="mmbtn" data-mode="CWR"    data-vfo="SUB">CW-R</button>
+        <button class="mmbtn" data-mode="AM"     data-vfo="SUB">AM</button>
+        <button class="mmbtn" data-mode="FM"     data-vfo="SUB">FM</button>
+        <button class="mmbtn" data-mode="DATA-L" data-vfo="SUB">D-L</button>
+        <button class="mmbtn" data-mode="DATA-U" data-vfo="SUB">D-U</button>
+        <button class="mmbtn" data-mode="DATA-FM" data-vfo="SUB">D-FM</button>
+        <button class="mmbtn" data-mode="C4FM"   data-vfo="SUB">C4FM</button>
       </div>
     </div>
-
-    <!-- SUB PREAMP -->
+    <!-- RF PATH SUB -->
     <div class="psec">
-      <div class="ptitle">PREAMP <span class="sub-tag">SUB</span></div>
-      <div class="preamp-grid" id="spre-grid">
-        <button class="prebtn cy" data-pre="0" data-vfo="SUB">IPO</button>
-        <button class="prebtn"    data-pre="1" data-vfo="SUB">AMP1</button>
-        <button class="prebtn"    data-pre="2" data-vfo="SUB">AMP2</button>
+      <div class="ptitle">RF PATH <span class="tag-s">SUB</span></div>
+      <div style="font-size:7px;color:var(--txt2);margin-bottom:2px">PREAMP / IPO</div>
+      <div class="rfgrid" id="spre">
+        <button class="rfbtn cy" data-pre="0" data-vfo="SUB">IPO</button>
+        <button class="rfbtn"    data-pre="1" data-vfo="SUB">AMP1</button>
+        <button class="rfbtn"    data-pre="2" data-vfo="SUB">AMP2</button>
+      </div>
+      <div style="display:flex;gap:2px;margin-top:3px">
+        <button class="rfbtn" id="att-s" style="flex:1" onclick="togRF('att_sub')">ATT</button>
+        <button class="rfbtn" id="dnf-s" style="flex:1" onclick="togRF('dnf_sub')">DNF</button>
+        <button class="rfbtn" id="nb-s"  style="flex:1" onclick="togRF('nb_sub')">NB</button>
+        <button class="rfbtn" id="nr-s"  style="flex:1" onclick="togRF('nr_sub')">NR</button>
+      </div>
+      <div style="font-size:7px;color:var(--txt2);margin:3px 0 2px">AGC</div>
+      <div class="agcgrid" id="sagc">
+        <button class="rfbtn" data-agc="OFF"  data-vfo="SUB">OFF</button>
+        <button class="rfbtn" data-agc="FAST" data-vfo="SUB">FAST</button>
+        <button class="rfbtn" data-agc="MID"  data-vfo="SUB">MID</button>
+        <button class="rfbtn cy" data-agc="SLOW" data-vfo="SUB">SLOW</button>
+        <button class="rfbtn" data-agc="AUTO" data-vfo="SUB">AUTO</button>
       </div>
     </div>
+  </div>
+</div><!-- /body -->
 
-  </div><!-- /right panel -->
+<!-- BOTTOM: IF FILTERS + AUDIO FILTERS -->
+<div id="bottom">
 
-</div><!-- /body grid -->
+  <!-- IF FILTER MAIN -->
+  <div class="fsec">
+    <div class="ftitle">IF FILTER <span class="tag-m">MAIN</span></div>
+    <canvas class="fcurve" id="ifc-main"></canvas>
+    <div class="fslrow">
+      <label>SHIFT</label>
+      <input type="range" id="shift-m" min="-1000" max="1000" step="10" value="0" oninput="ifChg('main','shift',this.value)">
+      <span id="sv-shift-m">0 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>WIDTH</label>
+      <input type="range" id="width-m" min="50" max="4000" step="50" value="2400" oninput="ifChg('main','width',this.value)">
+      <span id="sv-width-m">2400 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>NOTCH</label>
+      <input type="range" id="notch-m" min="0" max="4000" step="10" value="1000" oninput="ifChg('main','notch',this.value)">
+      <span id="sv-notch-m">1000 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>CONTOUR</label>
+      <input type="range" id="contour-m" min="-40" max="20" step="1" value="0" oninput="ifChg('main','contour',this.value)">
+      <span id="sv-contour-m">0 dB</span>
+    </div>
+  </div>
+
+  <!-- IF FILTER SUB -->
+  <div class="fsec">
+    <div class="ftitle">IF FILTER <span class="tag-s">SUB</span></div>
+    <canvas class="fcurve" id="ifc-sub"></canvas>
+    <div class="fslrow">
+      <label>SHIFT</label>
+      <input type="range" id="shift-s" min="-1000" max="1000" step="10" value="0" oninput="ifChg('sub','shift',this.value)">
+      <span id="sv-shift-s">0 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>WIDTH</label>
+      <input type="range" id="width-s" min="50" max="4000" step="50" value="2400" oninput="ifChg('sub','width',this.value)">
+      <span id="sv-width-s">2400 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>NOTCH</label>
+      <input type="range" id="notch-s" min="0" max="4000" step="10" value="1000" oninput="ifChg('sub','notch',this.value)">
+      <span id="sv-notch-s">1000 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>CONTOUR</label>
+      <input type="range" id="contour-s" min="-40" max="20" step="1" value="0" oninput="ifChg('sub','contour',this.value)">
+      <span id="sv-contour-s">0 dB</span>
+    </div>
+  </div>
+
+  <!-- AUDIO FILTER MAIN -->
+  <div class="fsec">
+    <div class="ftitle">AUDIO FILTER <span class="tag-m">MAIN</span></div>
+    <canvas class="fcurve" id="afc-main"></canvas>
+    <div class="fslrow">
+      <label>LCUT FREQ</label>
+      <input type="range" id="lcut-m" min="0" max="20" step="1" value="0" oninput="afChg('main','lcut',this.value)">
+      <span id="sv-lcut-m">OFF</span>
+    </div>
+    <div class="fslrow">
+      <label>LCUT SLOPE</label>
+      <div class="fsel">
+        <button class="fselb onm" id="lslope-m-6"  onclick="setSlope('main','lcut',0)">6dB/oct</button>
+        <button class="fselb"     id="lslope-m-18" onclick="setSlope('main','lcut',1)">18dB/oct</button>
+      </div>
+    </div>
+    <div class="fslrow">
+      <label>HCUT FREQ</label>
+      <input type="range" id="hcut-m" min="0" max="67" step="1" value="60" oninput="afChg('main','hcut',this.value)">
+      <span id="sv-hcut-m">3800 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>HCUT SLOPE</label>
+      <div class="fsel">
+        <button class="fselb onm" id="hslope-m-6"  onclick="setSlope('main','hcut',0)">6dB/oct</button>
+        <button class="fselb"     id="hslope-m-18" onclick="setSlope('main','hcut',1)">18dB/oct</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIO FILTER SUB -->
+  <div class="fsec">
+    <div class="ftitle">AUDIO FILTER <span class="tag-s">SUB</span></div>
+    <canvas class="fcurve" id="afc-sub"></canvas>
+    <div class="fslrow">
+      <label>LCUT FREQ</label>
+      <input type="range" id="lcut-s" min="0" max="20" step="1" value="0" oninput="afChg('sub','lcut',this.value)">
+      <span id="sv-lcut-s">OFF</span>
+    </div>
+    <div class="fslrow">
+      <label>LCUT SLOPE</label>
+      <div class="fsel">
+        <button class="fselb onm" id="lslope-s-6"  onclick="setSlope('sub','lcut',0)">6dB/oct</button>
+        <button class="fselb"     id="lslope-s-18" onclick="setSlope('sub','lcut',1)">18dB/oct</button>
+      </div>
+    </div>
+    <div class="fslrow">
+      <label>HCUT FREQ</label>
+      <input type="range" id="hcut-s" min="0" max="67" step="1" value="60" oninput="afChg('sub','hcut',this.value)">
+      <span id="sv-hcut-s">3800 Hz</span>
+    </div>
+    <div class="fslrow">
+      <label>HCUT SLOPE</label>
+      <div class="fsel">
+        <button class="fselb onm" id="hslope-s-6"  onclick="setSlope('sub','hcut',0)">6dB/oct</button>
+        <button class="fselb"     id="hslope-s-18" onclick="setSlope('sub','hcut',1)">18dB/oct</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /bottom -->
 
 <!-- CONNECT BAR -->
-<div id="connect-bar">
-  <span style="font-size:8px;letter-spacing:2px;color:var(--txt2)">PORT:</span>
+<div id="cbar">
+  <span style="font-size:7px;letter-spacing:2px;color:var(--txt2)">PORT:</span>
   <input type="text" id="port-in" value="COM4">
-  <span style="font-size:8px;letter-spacing:2px;color:var(--txt2)">BAUD:</span>
+  <span style="font-size:7px;letter-spacing:2px;color:var(--txt2)">BAUD:</span>
   <input type="number" id="baud-in" value="38400">
   <button class="cbtn" onclick="doConn()">⟶ CONNECT</button>
-  <button class="cbtn disc" onclick="doDisc()">✕ DISC</button>
+  <button class="cbtn d" onclick="doDisc()">✕ DISC</button>
   <div id="cstat">NOT CONNECTED</div>
-  <span style="font-size:8px;color:var(--txt2);margin-left:auto">API:</span>
-  <input type="text" id="api-in" value="http://localhost:8080" style="width:180px"
-    oninput="API=this.value">
+  <span style="font-size:7px;color:var(--txt2);margin-left:auto">API:</span>
+  <input type="text" id="api-in" value="http://localhost:8080" style="width:170px" oninput="API=this.value">
 </div>
-
-<!-- RAW BAR -->
-<div id="raw-bar">
-  <span style="font-size:8px;letter-spacing:2px;color:var(--txt2)">RAW CAT:</span>
-  <input type="text" id="raw-in" placeholder="MD01;  FA014250000;  RM1;" onkeydown="if(e.key=='Enter')sendRaw()">
+<div id="rbar">
+  <span style="font-size:7px;letter-spacing:2px;color:var(--txt2)">RAW CAT:</span>
+  <input type="text" id="raw-in" placeholder="MD01;  FA014250000;  RM1;" onkeydown="if(event.key==='Enter')sendRaw()">
   <button class="rbtn" onclick="sendRaw()">SEND</button>
 </div>
-<div id="raw-resp"></div>
+<div id="rresp"></div>
 
 <script>
 let API = 'http://localhost:8080';
-let state = {
+
+// ── State ─────────────────────────────────────────
+const S = {
   freq_main:14250000, freq_sub:7100000,
   mode_main:'USB', mode_sub:'USB',
   band_main:'20m', band_sub:'40m',
   tx:false, split:false, rit:false, xit:false, fn:false,
   af_main:128, rf_main:255, sq_main:0,
   af_sub:128,  rf_sub:255,  sq_sub:0,
-  power:100, notch_freq:1000, filter:2400,
+  power:100,
   nb_main:false, nr_main:false, autonotch:false, mannotch:false,
   att_main:false, lock_main:false,
-  nb_sub:false, nr_sub:false, autonotch_sub:false, mannotch_sub:false,
+  nb_sub:false, nr_sub:false, dnf_sub:false, notch_sub:false,
   att_sub:false, lock_sub:false,
+  dnf_main:false,
   preamp_main:0, preamp_sub:0,
+  agc_main:'SLOW', agc_sub:'SLOW',
   rit_offset:0,
-  smeter:0, po:0, alc:0, swr:0, idd:0,
-  connected:false
+  smeter_main:0, smeter_sub:0,
+  comp:0, alc:0, po:0, swr:0, idd:0, vdd:0,
+  connected:false,
+  // IF filter state
+  if_main:{shift:0, width:2400, notch:1000, contour:0, notch_on:false},
+  if_sub: {shift:0, width:2400, notch:1000, contour:0, notch_on:false},
+  // Audio filter state
+  af_filt_main:{lcut:0, lslope:0, hcut:60, hslope:0},
+  af_filt_sub: {lcut:0, lslope:0, hcut:60, hslope:0},
 };
 
-// ── API ──────────────────────────────────────────
+// ── API ───────────────────────────────────────────
 async function api(ep, body={}) {
   try {
     const r = await fetch(`${API}/api/${ep}`,{
@@ -676,7 +717,7 @@ async function apiGet(ep) {
   try { return await (await fetch(`${API}/api/${ep}`)).json(); } catch(e){ return {}; }
 }
 
-// ── Connect ──────────────────────────────────────
+// ── Connect ───────────────────────────────────────
 async function doConn() {
   const r = await api('connect',{port:document.getElementById('port-in').value,
     baud:parseInt(document.getElementById('baud-in').value)});
@@ -684,17 +725,17 @@ async function doConn() {
 }
 async function doDisc() { await api('disconnect'); setConn(false); }
 function setConn(ok) {
-  state.connected=ok;
+  S.connected=ok;
   const el=document.getElementById('cstat');
   el.textContent=ok?'● CONNECTED':'○ NOT CONNECTED';
   el.className=ok?'ok':'err';
 }
 
-// ── Freq modal ───────────────────────────────────
+// ── Freq modal ────────────────────────────────────
 let modalVFO='MAIN';
-function openModal(vfo) {
-  modalVFO=vfo;
-  document.getElementById('fminput').value=vfo==='MAIN'?state.freq_main:state.freq_sub;
+function openModal(v) {
+  modalVFO=v;
+  document.getElementById('fminput').value=v==='MAIN'?S.freq_main:S.freq_sub;
   document.getElementById('overlay').classList.add('show');
   setTimeout(()=>document.getElementById('fminput').focus(),50);
 }
@@ -703,7 +744,7 @@ async function submitModal() {
   const hz=parseInt(document.getElementById('fminput').value);
   if(!isNaN(hz)&&hz>0){
     await api('frequency',{vfo:modalVFO,hz});
-    if(modalVFO==='MAIN') state.freq_main=hz; else state.freq_sub=hz;
+    if(modalVFO==='MAIN') S.freq_main=hz; else S.freq_sub=hz;
     updateDisplay();
   }
   closeModal();
@@ -712,346 +753,469 @@ document.getElementById('overlay').addEventListener('click',e=>{if(e.target===e.
 document.getElementById('fminput').addEventListener('keydown',e=>{
   if(e.key==='Enter')submitModal(); if(e.key==='Escape')closeModal();});
 
-// ── Format freq ──────────────────────────────────
-function fmtHz(hz) {
-  const s=String(Math.round(hz)).padStart(9,'0');
-  return s.slice(0,-6)+'.'+s.slice(-6,-3)+'.'+s.slice(-3);
-}
+function fmtHz(hz){ const s=String(Math.round(hz)).padStart(9,'0');
+  return s.slice(0,-6)+'.'+s.slice(-6,-3)+'.'+s.slice(-3); }
 
-// ── Band buttons ────────────────────────────────
-document.querySelectorAll('.bbtn').forEach(b=>{
-  b.addEventListener('click',async()=>{
-    const band=b.dataset.band, vfo=b.dataset.vfo;
-    // map band to freq
-    await api('band_vfo',{vfo,band}).catch(()=>api('frequency',{vfo,hz:bandHz(band)}));
-    // fallback: just send frequency directly
-    await api('frequency',{vfo,hz:bandHz(band)});
-    if(vfo==='MAIN') state.band_main=band;
-    else state.band_sub=band;
-    updateBandBtns();
-    updateDisplay();
-  });
-});
+// ── Band buttons ──────────────────────────────────
 const BANDS={
   '160m':1900000,'80m':3700000,'60m':5357000,'40m':7100000,'30m':10125000,
   '20m':14250000,'17m':18100000,'15m':21200000,'12m':24900000,'10m':28500000,
   '6m':50125000,'2m':144200000,'70cm':432100000
 };
-function bandHz(b){ return BANDS[b]||14250000; }
+document.querySelectorAll('.bbtn').forEach(b=>{
+  b.addEventListener('click',async()=>{
+    const band=b.dataset.band, vfo=b.dataset.vfo;
+    await api('frequency',{vfo, hz:BANDS[band]||14250000});
+    if(vfo==='MAIN'){S.freq_main=BANDS[band]; S.band_main=band;}
+    else{S.freq_sub=BANDS[band]; S.band_sub=band;}
+    updBands(); updateDisplay();
+  });
+});
 
-// ── Mode buttons ─────────────────────────────────
-document.querySelectorAll('.mbtn2').forEach(b=>{
+// ── Mode buttons ──────────────────────────────────
+document.querySelectorAll('.mmbtn').forEach(b=>{
   b.addEventListener('click',async()=>{
     const mode=b.dataset.mode, vfo=b.dataset.vfo;
     await api('mode',{vfo,mode});
-    if(vfo==='MAIN') state.mode_main=mode; else state.mode_sub=mode;
-    updateModeBtns();
-    updateDisplay();
+    if(vfo==='MAIN') S.mode_main=mode; else S.mode_sub=mode;
+    updModes(); updateDisplay();
   });
 });
 
-// ── PTT ──────────────────────────────────────────
-async function setPTT(on){ await api('ptt',{tx:on}); state.tx=on; updateDisplay(); }
+// ── PTT ───────────────────────────────────────────
+async function setPTT(on){ await api('ptt',{tx:on}); S.tx=on; updateDisplay(); }
 
-// ── Toggle DSP buttons ───────────────────────────
-const btnCfg = {
-  nb_main:   {el:'btn-nb-m', col:'on-g', ep:'nb',    pay:(v)=>({on:v})},
-  nr_main:   {el:'btn-nr-m', col:'on-g', ep:'nr',    pay:(v)=>({on:v})},
-  autonotch: {el:'btn-an-m', col:'on-c', ep:'notch', pay:(v)=>({on:v,freq:state.notch_freq})},
-  mannotch:  {el:'btn-mn-m', col:'on-c', ep:'notch', pay:(v)=>({on:v,freq:state.notch_freq})},
-  att_main:  {el:'btn-att-m',col:'on-a', ep:'att',   pay:(v)=>({on:v})},
-  lock_main: {el:'btn-lk-m', col:'on-r', ep:'lock',  pay:(v)=>({on:v})},
-  nb_sub:    {el:'btn-nb-s', col:'on-g', ep:'raw',   pay:(v)=>({cmd:v?'NB1;':'NB0;'})},
-  nr_sub:    {el:'btn-nr-s', col:'on-g', ep:'raw',   pay:(v)=>({cmd:v?'NR1;':'NR0;'})},
-  autonotch_sub:{el:'btn-an-s',col:'on-c',ep:'raw',  pay:(v)=>({cmd:v?'BC1;':'BC0;'})},
-  mannotch_sub: {el:'btn-mn-s',col:'on-c',ep:'raw',  pay:(v)=>({cmd:v?'BP11000;':'BP00000;'})},
-  att_sub:   {el:'btn-att-s',col:'on-a', ep:'raw',   pay:(v)=>({cmd:v?'RA01;':'RA00;'})},
-  lock_sub:  {el:'btn-lk-s', col:'on-r', ep:'raw',   pay:(v)=>({cmd:v?'LK1;':'LK0;'})},
-  split:     {el:'btn-split',col:'on-b', ep:'split', pay:(v)=>({on:v})},
-  rit:       {el:'btn-rit',  col:'on-a', ep:'rit',   pay:(v)=>({on:v,offset:state.rit_offset})},
-  xit:       {el:'btn-xit',  col:'on-a', ep:'xit',   pay:(v)=>({on:v})},
-  fn:        {el:'btn-fn',   col:'on-c', ep:'raw',   pay:(v)=>({cmd:v?'FN1;':'FN0;'})},
-};
-async function tog(key) {
-  const c=btnCfg[key]; if(!c) return;
-  state[key]=!state[key];
-  await api(c.ep, c.pay(state[key]));
-  updateDSPBtns();
-}
-function updateDSPBtns() {
-  Object.entries(btnCfg).forEach(([key,c])=>{
-    const el=document.getElementById(c.el);
-    if(!el) return;
-    el.className='dbtn'+(state[key]?' '+c.col:'');
-    // re-add dvfo span
-    const lbl=el.textContent.replace(/MAIN|SUB|A\/B|START|STOP/,'').trim();
-    const dvfoText=el.querySelector('.dvfo')?.textContent||'';
-    el.innerHTML=lbl+'<span class="dvfo">'+dvfoText+'</span>';
-  });
-}
-
-// ── Preamp ───────────────────────────────────────
-document.querySelectorAll('.prebtn').forEach(b=>{
+// ── RF PATH (preamp) ──────────────────────────────
+document.querySelectorAll('#mpre .rfbtn, #spre .rfbtn').forEach(b=>{
   b.addEventListener('click',async()=>{
     const lvl=parseInt(b.dataset.pre), vfo=b.dataset.vfo;
-    // FTX-1 preamp uses P1=vfo(0=main,1=sub) P2=level
     const p1=vfo==='SUB'?'1':'0';
     await api('raw',{cmd:`PA${p1}${lvl};`});
-    if(vfo==='MAIN') state.preamp_main=lvl; else state.preamp_sub=lvl;
-    updatePreamp();
+    if(vfo==='MAIN') S.preamp_main=lvl; else S.preamp_sub=lvl;
+    updPreamp();
   });
 });
-function updatePreamp() {
-  document.querySelectorAll('#mpre-grid .prebtn').forEach(b=>{
-    b.className='prebtn'+(parseInt(b.dataset.pre)===state.preamp_main?' am':'');
-  });
-  document.querySelectorAll('#spre-grid .prebtn').forEach(b=>{
-    b.className='prebtn'+(parseInt(b.dataset.pre)===state.preamp_sub?' cy':'');
-  });
-}
 
-// ── Power ────────────────────────────────────────
-let pwrTmr;
-function pwrChg(v){ v=parseInt(v);
-  document.getElementById('pwr-val').textContent=v+'W';
-  clearTimeout(pwrTmr); pwrTmr=setTimeout(()=>api('power',{level:v}),150);
-}
+// ── AGC ───────────────────────────────────────────
+const AGC_MAP={'OFF':'0','FAST':'1','MID':'2','SLOW':'3','AUTO':'4'};
+document.querySelectorAll('#magc .rfbtn, #sagc .rfbtn').forEach(b=>{
+  b.addEventListener('click',async()=>{
+    const agc=b.dataset.agc, vfo=b.dataset.vfo;
+    const p1=vfo==='SUB'?'1':'0';
+    await api('raw',{cmd:`GT0${p1}${AGC_MAP[agc]||'3'};`});
+    if(vfo==='MAIN') S.agc_main=agc; else S.agc_sub=agc;
+    updAGC();
+  });
+});
 
-// ── RIT ──────────────────────────────────────────
+// ── Toggle DSP buttons ────────────────────────────
+const TOGCFG = {
+  nb_main:   {el:'btn-nb-m', col:'on-g', cmd:(v)=>v?'NB1;':'NB0;'},
+  nr_main:   {el:'btn-nr-m', col:'on-g', cmd:(v)=>v?'NR1;':'NR0;'},
+  autonotch: {el:'btn-an-m', col:'on-c', cmd:(v)=>v?'BC1;':'BC0;'},
+  mannotch:  {el:'btn-mn-m', col:'on-c', cmd:(v)=>v?`BP1${String(S.if_main.notch).padStart(4,'0')};`:'BP00000;'},
+  att_main:  {el:'btn-att-m',col:'on-a', cmd:(v)=>v?'RA01;':'RA00;'},
+  lock_main: {el:'btn-lk-m', col:'on-r', cmd:(v)=>v?'LK1;':'LK0;'},
+  split:     {el:'btn-sp',   col:'on-b', cmd:(v)=>v?'SP1;':'SP0;'},
+  rit:       {el:'btn-rit',  col:'on-a', cmd:(v)=>v?'RT1;':'RT0;'},
+  xit:       {el:'btn-xit',  col:'on-a', cmd:(v)=>v?'XT1;':'XT0;'},
+  nb_sub:    {el:'btn-nb-s', col:'on-g', cmd:(v)=>v?'NB1;':'NB0;'},
+  nr_sub:    {el:'btn-nr-s', col:'on-g', cmd:(v)=>v?'NR1;':'NR0;'},
+  dnf_sub:   {el:'btn-an-s', col:'on-c', cmd:(v)=>v?'BC1;':'BC0;'},
+  notch_sub: {el:'btn-mn-s', col:'on-c', cmd:(v)=>v?`BP1${String(S.if_sub.notch).padStart(4,'0')};`:'BP00000;'},
+  att_sub:   {el:'btn-att-s',col:'on-a', cmd:(v)=>v?'RA01;':'RA00;'},
+  lock_sub:  {el:'btn-lk-s', col:'on-r', cmd:(v)=>v?'LK1;':'LK0;'},
+  fn:        {el:'btn-fn',   col:'on-c', cmd:(v)=>v?'FN1;':'FN0;'},
+  dnf_main:  {el:'dnf-m',    col:'gn',   cmd:(v)=>v?'BC1;':'BC0;'},
+  att_sub2:  {el:'att-s',    col:'am',   cmd:(v)=>v?'RA01;':'RA00;'},
+};
+async function tog(key) {
+  const c=TOGCFG[key]; if(!c) return;
+  S[key]=!S[key];
+  await api('raw',{cmd:c.cmd(S[key])});
+  updDSP();
+}
+function togRF(key){ tog(key); }
+
+// ── Power knob ─────────────────────────────────── 
+// handled via knob system
+
+// ── RIT ───────────────────────────────────────────
 let ritTmr;
 function ritChg(v){ v=parseInt(v);
   document.getElementById('rit-sl').value=v;
   document.getElementById('rit-num').value=v;
-  state.rit_offset=v;
+  S.rit_offset=v;
   document.getElementById('mrit').textContent=v!==0?(v>0?'+':'')+v+'Hz':'';
   clearTimeout(ritTmr);
-  ritTmr=setTimeout(()=>{
-    if(state.rit) api('rit',{on:true,offset:v});
-  },200);
+  ritTmr=setTimeout(()=>{ if(S.rit) api('rit',{on:true,offset:v}); },200);
 }
 
-// ── Raw CAT ──────────────────────────────────────
+// ── Raw CAT ───────────────────────────────────────
 async function sendRaw(){
-  const cmd=document.getElementById('raw-in').value.trim();
-  if(!cmd) return;
+  const cmd=document.getElementById('raw-in').value.trim(); if(!cmd) return;
   const r=await api('raw',{cmd});
-  document.getElementById('raw-resp').textContent='→ '+(r.response||'(no response)');
+  document.getElementById('rresp').textContent='→ '+(r.response||'(no response)');
 }
 document.getElementById('raw-in').addEventListener('keydown',e=>{if(e.key==='Enter')sendRaw();});
 
-// ── Knobs ────────────────────────────────────────
-const knobSendMap = {
-  af_main:  (v)=>api('af_gain', {level:v,sub:false}),
-  af_sub:   (v)=>api('af_gain', {level:v,sub:true}),
-  rf_main:  (v)=>api('rf_gain', {level:v}),
-  rf_sub:   (v)=>api('raw',     {cmd:`RG${String(v).padStart(3,'0')};`}),
-  sq_main:  (v)=>api('squelch', {level:v,sub:false}),
-  sq_sub:   (v)=>api('squelch', {level:v,sub:true}),
-  notch_freq:(v)=>api('notch',  {on:state.mannotch,freq:v}),
-  filter:   (v)=>api('filter',  {width:v}),
+// ── IF Filter controls ────────────────────────────
+let ifTmr={};
+function ifChg(side, param, rawVal) {
+  const v=parseInt(rawVal);
+  const f = side==='main' ? S.if_main : S.if_sub;
+  f[param]=v;
+  document.getElementById(`sv-${param}-${side[0]}`).textContent =
+    param==='contour' ? v+(v>=0?'+':'')+' dB' : v+' Hz';
+  // Debounce CAT send
+  clearTimeout(ifTmr[side+param]);
+  ifTmr[side+param] = setTimeout(()=>sendIF(side), 150);
+  drawIFCurve(side);
+}
+async function sendIF(side) {
+  const f = side==='main' ? S.if_main : S.if_sub;
+  // IS: IF Shift. Format: IS0[+/-][4 digits]; e.g. IS00+0500;
+  const shiftSign = f.shift>=0?'+':'-';
+  const shiftAbs  = String(Math.abs(f.shift)).padStart(4,'0');
+  await api('raw',{cmd:`IS0${shiftSign}${shiftAbs};`});
+  // SH: Width. SH0[2 digits]; width index 0-20 mapped from Hz
+  const widthIdx = Math.round((f.width-50)/50); // 50Hz=0 .. 4000Hz=79, cap 20 for old-compat
+  await api('raw',{cmd:`SH0${String(Math.min(widthIdx,99)).padStart(2,'0')};`});
+  // BP: Manual Notch
+  if(f.notch_on) await api('raw',{cmd:`BP1${String(f.notch).padStart(4,'0')};`});
+  // CO: Contour. CO[P1 level sign+3digits][P2 width 2digits];
+  const cSign=f.contour>=0?'+':'-';
+  const cAbs=String(Math.abs(f.contour)).padStart(2,'0');
+  await api('raw',{cmd:`CO${cSign}${cAbs}05;`});
+}
+
+// ── Audio Filter controls ─────────────────────────
+// LCUT: 0=OFF, 1-20 = 100-1000Hz in 50Hz steps
+// HCUT: 0=OFF, 1-67 = 700-4000Hz in 50Hz steps
+const LCUT_FREQS=['OFF','100','150','200','250','300','350','400','450','500',
+  '550','600','650','700','750','800','850','900','950','1000','1050'];
+const HCUT_FREQS=['OFF'];
+for(let i=700;i<=4000;i+=50) HCUT_FREQS.push(String(i));
+
+let afTmr={};
+function afChg(side, cut, rawVal){
+  const v=parseInt(rawVal);
+  const f=side==='main'?S.af_filt_main:S.af_filt_sub;
+  f[cut]=v;
+  const arr=cut==='lcut'?LCUT_FREQS:HCUT_FREQS;
+  const lbl=arr[v]||(v===0?'OFF':arr[arr.length-1]);
+  document.getElementById(`sv-${cut}-${side[0]}`).textContent=lbl+(v>0?' Hz':'');
+  clearTimeout(afTmr[side+cut]);
+  afTmr[side+cut]=setTimeout(()=>sendAF(side),200);
+  drawAFCurve(side);
+}
+function setSlope(side, cut, val){
+  const f=side==='main'?S.af_filt_main:S.af_filt_sub;
+  f[cut+'slope']=val;
+  // update button state
+  const prefix=`${cut.replace('cut','')}slope-${side[0]}`;
+  document.getElementById(prefix+'-6').className='fselb'+(val===0?' onm':'');
+  document.getElementById(prefix+'-18').className='fselb'+(val===1?' onm':'');
+  sendAF(side);
+  drawAFCurve(side);
+}
+async function sendAF(side){
+  const f=side==='main'?S.af_filt_main:S.af_filt_sub;
+  // Use EX menu: EX[menu number][value];
+  // SSB LCUT FREQ: EX101[2digit]; SSB LCUT SLOPE: EX102[1digit];
+  // SSB HCUT FREQ: EX103[2digit]; SSB HCUT SLOPE: EX104[1digit];
+  // Note: menu numbers are approximate — FTX-1 may differ
+  const lc=String(f.lcut).padStart(2,'0');
+  const hc=String(f.hcut).padStart(2,'0');
+  await api('raw',{cmd:`EX01040${lc};`}); // LCUT FREQ
+  await api('raw',{cmd:`EX01050${f.lslope};`}); // LCUT SLOPE
+  await api('raw',{cmd:`EX01060${hc};`}); // HCUT FREQ
+  await api('raw',{cmd:`EX01070${f.hslope};`}); // HCUT SLOPE
+}
+
+// ── Draw IF curve ─────────────────────────────────
+function drawIFCurve(side){
+  const cv=document.getElementById(`ifc-${side}`);
+  const f=side==='main'?S.if_main:S.if_sub;
+  const color=side==='main'?'#e8a020':'#10c8c8';
+  const notchColor='#e03020';
+  const W=cv.width=cv.offsetWidth||300, H=cv.height||80;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  // Background grid
+  ctx.strokeStyle='#1a2a1a'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=W/8){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H;y+=H/4){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+  // Frequency range 0-4000 Hz displayed
+  const fToX=(fq)=>(fq/4000)*W;
+  const center=2000+f.shift; // center frequency with shift
+  const half=f.width/2;
+  const lo=Math.max(0,center-half), hi=Math.min(4000,center+half);
+  // Passband fill
+  ctx.fillStyle=color+'20';
+  ctx.fillRect(fToX(lo),0,fToX(hi)-fToX(lo),H);
+  // Passband edges
+  ctx.strokeStyle=color; ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(fToX(lo),H); ctx.lineTo(fToX(lo),H*0.15);
+  ctx.lineTo(fToX(hi),H*0.15); ctx.lineTo(fToX(hi),H);
+  ctx.stroke();
+  // Contour boost/cut indicator
+  if(f.contour!==0){
+    const cx=fToX(center);
+    const cy=f.contour>0?H*0.05:H*0.4;
+    ctx.strokeStyle='#d060d080'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+    ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#d060d0'; ctx.font='7px monospace';
+    ctx.fillText((f.contour>0?'+':'')+f.contour+'dB',cx-12,cy+3);
+  }
+  // Notch marker
+  const nx=fToX(f.notch);
+  ctx.strokeStyle=notchColor+'80'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
+  ctx.beginPath(); ctx.moveTo(nx,0); ctx.lineTo(nx,H); ctx.stroke();
+  ctx.setLineDash([]);
+  // Labels
+  ctx.fillStyle='#304030'; ctx.font='6px monospace';
+  ['0','1k','2k','3k','4k'].forEach((l,i)=>ctx.fillText(l,i*W/4+2,H-2));
+  ctx.fillStyle=color; ctx.font='7px monospace';
+  ctx.fillText(`W:${f.width}Hz S:${f.shift>0?'+':''}${f.shift}`,4,10);
+}
+
+// ── Draw Audio filter curve ───────────────────────
+function drawAFCurve(side){
+  const cv=document.getElementById(`afc-${side}`);
+  const f=side==='main'?S.af_filt_main:S.af_filt_sub;
+  const color=side==='main'?'#e8a020':'#10c8c8';
+  const W=cv.width=cv.offsetWidth||300, H=cv.height||80;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  // Grid
+  ctx.strokeStyle='#1a2a1a'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=W/8){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=H/4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Compute LCUT/HCUT frequencies
+  const lFreq = f.lcut===0 ? 0 : 50+f.lcut*50;       // 0=OFF else 100-1050
+  const hFreq = f.hcut===0 ? 4000 : 650+f.hcut*50;    // 0=OFF else 700-4000
+  const maxF=4000;
+  const fToX=(fq)=>(fq/maxF)*W;
+  // Draw response curve
+  ctx.beginPath();
+  ctx.moveTo(0,H);
+  if(lFreq>0){
+    const roll=f.lslope===0?0.3:0.08;
+    for(let x=0;x<=W;x++){
+      const freq=x/W*maxF;
+      let gain=1;
+      if(freq<lFreq) gain=Math.pow(freq/lFreq,1/(roll+0.01));
+      const y=H-(gain*(H*0.75));
+      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+  } else {
+    ctx.lineTo(0,H*0.25);
+  }
+  if(hFreq<maxF){
+    const fToXh=fToX(hFreq);
+    ctx.lineTo(fToXh,H*0.25);
+    const roll=f.hslope===0?0.3:0.08;
+    for(let x=Math.floor(fToXh);x<=W;x++){
+      const freq=x/W*maxF;
+      let gain=1;
+      if(freq>hFreq) gain=Math.pow(hFreq/freq,1/(roll+0.01));
+      ctx.lineTo(x,H-(gain*(H*0.75)));
+    }
+  } else {
+    ctx.lineTo(W,H*0.25);
+  }
+  ctx.lineTo(W,H);
+  ctx.closePath();
+  ctx.fillStyle=color+'18'; ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+  // Labels
+  ctx.fillStyle='#304030'; ctx.font='6px monospace';
+  ['0','1k','2k','3k','4k'].forEach((l,i)=>ctx.fillText(l,i*W/4+2,H-2));
+  const lLabel=f.lcut===0?'OFF':LCUT_FREQS[f.lcut]+'Hz';
+  const hLabel=f.hcut===0?'OFF':HCUT_FREQS[f.hcut]+'Hz';
+  ctx.fillStyle=color; ctx.font='7px monospace';
+  ctx.fillText(`L:${lLabel} H:${hLabel}`,4,10);
+}
+
+// ── Knobs ─────────────────────────────────────────
+const KNOB_SEND = {
+  af_main: v=>api('af_gain',{level:v,sub:false}),
+  af_sub:  v=>api('af_gain',{level:v,sub:true}),
+  rf_main: v=>api('rf_gain',{level:v}),
+  rf_sub:  v=>api('raw',{cmd:`RG${String(v).padStart(3,'0')};`}),
+  sq_main: v=>api('squelch',{level:v,sub:false}),
+  sq_sub:  v=>api('squelch',{level:v,sub:true}),
+  power:   v=>api('power',{level:v}),
 };
-const knobValIds = {
+const KNOB_VAL_ID = {
   af_main:'kv-af-main', af_sub:'kv-af-sub',
   rf_main:'kv-rf-main', rf_sub:'kv-rf-sub',
   sq_main:'kv-sq-main', sq_sub:'kv-sq-sub',
-  notch_freq:'kv-notch', filter:'kv-filter'
+  power:'kv-power',
 };
-
 function drawKnob(canvas,val,mn,mx,color){
-  const ctx=canvas.getContext('2d'),r=19,cx=24,cy=24,w=48;
-  ctx.clearRect(0,0,w,w);
-  const sa=Math.PI*.75, ea=Math.PI*2.25, norm=(val-mn)/(mx-mn);
-  ctx.beginPath(); ctx.arc(cx,cy,r,sa,ea);
-  ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=5; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx,cy,r,sa,sa+norm*(ea-sa));
-  ctx.strokeStyle=color; ctx.lineWidth=5; ctx.stroke();
-  const g=ctx.createRadialGradient(cx-4,cy-4,2,cx,cy,r-4);
-  g.addColorStop(0,'#383838'); g.addColorStop(1,'#181818');
-  ctx.beginPath(); ctx.arc(cx,cy,r-7,0,Math.PI*2);
-  ctx.fillStyle=g; ctx.fill();
+  const ctx=canvas.getContext('2d'),r=17,cx=22,cy=22;
+  ctx.clearRect(0,0,44,44);
+  const sa=Math.PI*.75,ea=Math.PI*2.25,norm=(val-mn)/(mx-mn);
+  ctx.beginPath();ctx.arc(cx,cy,r,sa,ea);ctx.strokeStyle='#1a1a1a';ctx.lineWidth=4;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,r,sa,sa+norm*(ea-sa));ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();
+  const g=ctx.createRadialGradient(cx-3,cy-3,1,cx,cy,r-3);
+  g.addColorStop(0,'#333');g.addColorStop(1,'#161616');
+  ctx.beginPath();ctx.arc(cx,cy,r-6,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
   const da=sa+norm*(ea-sa);
-  const dx=cx+Math.cos(da)*(r-10), dy=cy+Math.sin(da)*(r-10);
-  ctx.beginPath(); ctx.arc(dx,dy,2,0,Math.PI*2);
-  ctx.fillStyle=color; ctx.fill();
+  ctx.beginPath();ctx.arc(cx+Math.cos(da)*(r-9),cy+Math.sin(da)*(r-9),2,0,Math.PI*2);
+  ctx.fillStyle=color;ctx.fill();
 }
-
 function initKnobs(){
   document.querySelectorAll('.kwrap').forEach(wrap=>{
-    const canvas=wrap.querySelector('canvas');
-    const param=wrap.dataset.param;
-    const mn=parseFloat(wrap.dataset.min), mx=parseFloat(wrap.dataset.max);
-    let val=parseFloat(wrap.dataset.val);
-    const color=wrap.dataset.color||'#e8a020';
-    drawKnob(canvas,val,mn,mx,color);
+    const cv=wrap.querySelector('canvas');
+    const p=wrap.dataset.p, mn=parseFloat(wrap.dataset.mn), mx=parseFloat(wrap.dataset.mx);
+    let val=parseFloat(wrap.dataset.v), color=wrap.dataset.c||'#e8a020';
+    drawKnob(cv,val,mn,mx,color);
     let sy,sv,tmr;
-    const move=(cy)=>{
+    const move=cy=>{
       val=Math.max(mn,Math.min(mx,sv+(sy-cy)*(mx-mn)/120));
-      wrap.dataset.val=val;
-      drawKnob(canvas,val,mn,mx,color);
-      const el=document.getElementById(knobValIds[param]);
+      wrap.dataset.v=val; drawKnob(cv,val,mn,mx,color);
+      const el=document.getElementById(KNOB_VAL_ID[p]);
       if(el) el.textContent=Math.round(val);
+      if(p==='power'){document.getElementById('kv-power').textContent=Math.round(val)+'W';}
       clearTimeout(tmr);
-      tmr=setTimeout(()=>{ if(knobSendMap[param]) knobSendMap[param](Math.round(val)); },120);
+      tmr=setTimeout(()=>{if(KNOB_SEND[p])KNOB_SEND[p](Math.round(val));},120);
     };
-    canvas.addEventListener('mousedown',e=>{ sy=e.clientY; sv=val;
-      const mm=ev=>move(ev.clientY), mu=()=>{removeEventListener('mousemove',mm);removeEventListener('mouseup',mu);};
-      addEventListener('mousemove',mm); addEventListener('mouseup',mu); });
-    canvas.addEventListener('touchstart',e=>{ sy=e.touches[0].clientY; sv=val; e.preventDefault();
-      const tm=ev=>move(ev.touches[0].clientY), tu=()=>{removeEventListener('touchmove',tm);removeEventListener('touchend',tu);};
-      addEventListener('touchmove',tm,{passive:false}); addEventListener('touchend',tu); },{passive:false});
-    canvas.addEventListener('wheel',e=>{ e.preventDefault();
-      val=Math.max(mn,Math.min(mx,val-e.deltaY*0.5));
-      wrap.dataset.val=val; drawKnob(canvas,val,mn,mx,color);
-      const el=document.getElementById(knobValIds[param]);
+    cv.addEventListener('mousedown',e=>{sy=e.clientY;sv=val;
+      const mm=e2=>move(e2.clientY),mu=()=>{removeEventListener('mousemove',mm);removeEventListener('mouseup',mu);};
+      addEventListener('mousemove',mm);addEventListener('mouseup',mu);});
+    cv.addEventListener('touchstart',e=>{sy=e.touches[0].clientY;sv=val;e.preventDefault();
+      const tm=e2=>move(e2.touches[0].clientY),tu=()=>{removeEventListener('touchmove',tm);removeEventListener('touchend',tu);};
+      addEventListener('touchmove',tm,{passive:false});addEventListener('touchend',tu);},{passive:false});
+    cv.addEventListener('wheel',e=>{e.preventDefault();
+      val=Math.max(mn,Math.min(mx,val-e.deltaY*0.4));
+      wrap.dataset.v=val;drawKnob(cv,val,mn,mx,color);
+      const el=document.getElementById(KNOB_VAL_ID[p]);
       if(el) el.textContent=Math.round(val);
-      clearTimeout(tmr); tmr=setTimeout(()=>{ if(knobSendMap[param]) knobSendMap[param](Math.round(val)); },120);
+      clearTimeout(tmr);tmr=setTimeout(()=>{if(KNOB_SEND[p])KNOB_SEND[p](Math.round(val));},120);
     },{passive:false});
   });
 }
 
-// ── Band / Mode btn state ────────────────────────
-function updateBandBtns(){
-  document.querySelectorAll('#mband-grid .bbtn').forEach(b=>{
-    b.className='bbtn'+(b.dataset.band===state.band_main?' am active':'');
-  });
-  document.querySelectorAll('#sband-grid .bbtn').forEach(b=>{
-    b.className='bbtn'+(b.dataset.band===state.band_sub?' su active':'');
+// ── Update helpers ────────────────────────────────
+function updBands(){
+  document.querySelectorAll('#mband-grid .bbtn').forEach(b=>b.className='bbtn'+(b.dataset.band===S.band_main?' am':''));
+  document.querySelectorAll('#sband-grid .bbtn').forEach(b=>b.className='bbtn'+(b.dataset.band===S.band_sub?' su':''));
+}
+function updModes(){
+  document.querySelectorAll('#mmode-grid .mmbtn').forEach(b=>b.className='mmbtn'+(b.dataset.mode===S.mode_main?' am active':''));
+  document.querySelectorAll('#smode-grid .mmbtn').forEach(b=>b.className='mmbtn'+(b.dataset.mode===S.mode_sub?' su active':''));
+}
+function updPreamp(){
+  document.querySelectorAll('#mpre .rfbtn').forEach(b=>b.className='rfbtn'+(parseInt(b.dataset.pre)===S.preamp_main?' am':''));
+  document.querySelectorAll('#spre .rfbtn').forEach(b=>b.className='rfbtn'+(parseInt(b.dataset.pre)===S.preamp_sub?' cy':''));
+}
+function updAGC(){
+  document.querySelectorAll('#magc .rfbtn').forEach(b=>b.className='rfbtn'+(b.dataset.agc===S.agc_main?' am':''));
+  document.querySelectorAll('#sagc .rfbtn').forEach(b=>b.className='rfbtn'+(b.dataset.agc===S.agc_sub?' cy':''));
+}
+function updDSP(){
+  Object.entries(TOGCFG).forEach(([key,c])=>{
+    const el=document.getElementById(c.el); if(!el) return;
+    const on=!!S[key];
+    const base=el.className.replace(/\s*(on-\w+|\w+)\s*/g,'').trim()||'dbtn';
+    el.className=(el.classList.contains('dbtn')?'dbtn':'rfbtn')+(on?' '+c.col:'');
   });
 }
-function updateModeBtns(){
-  document.querySelectorAll('#mmode-grid .mbtn2').forEach(b=>{
-    b.className='mbtn2'+(b.dataset.mode===state.mode_main?' am active':'');
-  });
-  document.querySelectorAll('#smode-grid .mbtn2').forEach(b=>{
-    b.className='mbtn2'+(b.dataset.mode===state.mode_sub?' su active':'');
-  });
-}
+function setM(id,pct){const el=document.getElementById(id);if(el)el.style.width=Math.min(100,Math.max(0,pct))+'%';}
 
-// ── Meter conversions (matching FTX-1 Python project) ────────────────
-// S-meter: raw 0-255, raw128=S9, raw255=+60dB, non-linear
-const S_RAW = {S1:14, S3:42, S5:81, S7:103, S9:128, P10:165, P20:202, P40:233, P60:255};
-function sFromRaw(r) {
-  r = Math.max(0,Math.min(255,Math.round(r)));
-  if (r < S_RAW.S1) return {pct:0,   txt:'S0'};
-  if (r < S_RAW.S3) return {pct:14,  txt:'S1'};
-  if (r < S_RAW.S5) return {pct:28,  txt:'S3'};
-  if (r < S_RAW.S7) return {pct:44,  txt:'S5'};
-  if (r < S_RAW.S9) return {pct:58,  txt:'S7'};
-  if (r < S_RAW.P10){return {pct:68, txt:'S9'};}
-  // +dB zone: map P10-P60 to 68-100%
-  const db = lerp(r, S_RAW.P10,S_RAW.P20,10,20,
-                      S_RAW.P20,S_RAW.P40,20,40,
-                      S_RAW.P40,S_RAW.P60,40,60);
-  const pct = 68 + (db-10)/50*32;
-  return {pct:Math.min(100,pct), txt:'+'+Math.round(db)+'dB'};
+// ── S-meter conversion ────────────────────────────
+const SR={S1:14,S3:42,S5:81,S7:103,S9:128,P10:165,P20:202,P40:233,P60:255};
+function sMeter(r){
+  r=Math.max(0,Math.min(255,r));
+  if(r<SR.S1) return{p:0,t:'S0'};
+  if(r<SR.S3) return{p:14,t:'S1'};
+  if(r<SR.S5) return{p:28,t:'S3'};
+  if(r<SR.S7) return{p:44,t:'S5'};
+  if(r<SR.S9) return{p:58,t:'S7'};
+  if(r<SR.P10)return{p:68,t:'S9'};
+  const lerp=(x,x1,x2,y1,y2)=>y1+(y2-y1)*(x-x1)/(x2-x1);
+  let db;
+  if(r<SR.P20) db=lerp(r,SR.P10,SR.P20,10,20);
+  else if(r<SR.P40) db=lerp(r,SR.P20,SR.P40,20,40);
+  else db=lerp(r,SR.P40,SR.P60,40,60);
+  return{p:68+(db-10)/50*32,t:'+'+Math.round(db)+'dB'};
 }
-function lerp(x, x0,x1,y0,y1, x2,x3,y2,y3, x4,x5,y4,y5) {
-  if (x<=x1) return y0+(y1-y0)*(x-x0)/(x1-x0);
-  if (x<=x3) return y2+(y3-y2)*(x-x2)/(x3-x2);
-  return y4+(y5-y4)*(x-x4)/(x5-x4);
-}
-// PO: piecewise watts from raw (from Python project)
-function poFromRaw(x) {
+function poW(x){
   const pts=[[55,.5],[73,1],[113,3],[139,5],[164,7.5],[189,10],[255,15]];
-  if (x<=0) return 0;
-  if (x<=pts[0][0]) return pts[0][1]*x/pts[0][0];
-  for (let i=0;i<pts.length-1;i++) {
-    const [x1,y1]=pts[i],[x2,y2]=pts[i+1];
-    if (x<=x2) return y1+(y2-y1)*(x-x1)/(x2-x1);
+  if(x<=0)return'0W';
+  for(let i=0;i<pts.length-1;i++){
+    const[x1,y1]=pts[i],[x2,y2]=pts[i+1];
+    if(x<=x2)return(y1+(y2-y1)*(x-x1)/(x2-x1)).toFixed(1)+'W';
   }
-  return pts[pts.length-1][1];
+  return'15W';
 }
-// SWR from raw
-function swrFromRaw(r) {
-  if (r>=255) return '∞';
-  if (r<=0)   return '1.0';
-  const v = 1.0 + 0.333*(Math.exp(0.0151*r)-1.0);
-  return v.toFixed(2);
-}
-// ALC: 0-200%
-function alcFromRaw(r) { return Math.min(200,(r*200/252)).toFixed(0)+'%'; }
-// COMP: 0-30dB
-function compFromRaw(r) { return (r*30/255).toFixed(1)+'dB'; }
-// IDD: 0-3A
-function iddFromRaw(r) { return (r*3/255).toFixed(2)+'A'; }
-// VDD: 0-13.8V
-function vddFromRaw(r) { return (r*13.8/203).toFixed(1)+'V'; }
 
-// ── Meters update ────────────────────────────────
-function setM(id,pct){ const el=document.getElementById(id); if(el) el.style.width=Math.min(100,Math.max(0,pct))+'%'; }
-
-// ── Main display update ──────────────────────────
+// ── Main display update ───────────────────────────
 function updateDisplay(){
-  document.getElementById('fmain').textContent=fmtHz(state.freq_main);
-  document.getElementById('fsub').textContent=fmtHz(state.freq_sub);
-  document.getElementById('mmode').textContent=state.mode_main;
-  document.getElementById('smode').textContent=state.mode_sub;
-  document.getElementById('mband').textContent=state.band_main;
-  document.getElementById('sband').textContent=state.band_sub;
-  const txind=document.getElementById('tx-ind');
-  txind.textContent=state.tx?'TX':'RX';
-  txind.className=state.tx?'on':'';
-  document.getElementById('split-ind').textContent=state.split?'SPLIT':'';
-  updateBandBtns(); updateModeBtns(); updateDSPBtns(); updatePreamp();
-  // S-meters (non-linear)
-  const sm = sFromRaw(state.smeter_main||0);
-  const ss = sFromRaw(state.smeter_sub||0);
-  setM('smf', sm.pct); document.getElementById('smv').textContent = sm.txt;
-  setM('ssf', ss.pct); document.getElementById('ssv').textContent = ss.txt;
-  // TX meters — show values always, they go to 0 when RX
-  const poW = poFromRaw(state.po||0);
-  setM('pof', (state.po||0)/255*100);
-  document.getElementById('pov').textContent = state.tx ? poW.toFixed(1)+'W' : '—';
-  const alcPct = state.alc||0;
-  setM('alf', alcPct/252*100);
-  document.getElementById('alv').textContent = state.tx ? alcFromRaw(alcPct) : '—';
-  const compR = state.comp||0;
-  setM('compf', compR/255*100);
-  document.getElementById('compv').textContent = state.tx ? compFromRaw(compR) : '—';
-  const swrR = state.swr||0;
-  setM('swf', Math.min(100, swrR/100*100));
-  document.getElementById('swv').textContent = state.tx ? swrFromRaw(swrR)+':1' : '—';
-  const iddR = state.idd||0;
-  setM('idf', iddR/255*100);
-  document.getElementById('idv').textContent = iddFromRaw(iddR);
-  const vddR = state.vdd||0;
-  setM('vddf', Math.min(100,vddR/203*100));
-  document.getElementById('vddv').textContent = vddFromRaw(vddR);
+  document.getElementById('fmain').textContent=fmtHz(S.freq_main);
+  document.getElementById('fsub').textContent=fmtHz(S.freq_sub);
+  document.getElementById('mmode').textContent=S.mode_main;
+  document.getElementById('smode').textContent=S.mode_sub;
+  document.getElementById('mband').textContent=S.band_main;
+  document.getElementById('sband').textContent=S.band_sub;
+  const ti=document.getElementById('tx-ind');
+  ti.textContent=S.tx?'TX':'RX'; ti.className=S.tx?'on':'';
+  document.getElementById('split-ind').textContent=S.split?'SPLIT':'';
+  updBands(); updModes(); updPreamp(); updAGC(); updDSP();
+  // Meters
+  const sm=sMeter(S.smeter_main||0),ss=sMeter(S.smeter_sub||0);
+  setM('smf',sm.p); document.getElementById('smv').textContent=sm.t;
+  setM('ssf',ss.p); document.getElementById('ssv').textContent=ss.t;
+  setM('pof',(S.po||0)/255*100);
+  document.getElementById('pov').textContent=S.tx?poW(S.po||0):'—';
+  setM('alf',(S.alc||0)/252*100);
+  document.getElementById('alv').textContent=S.tx?Math.round((S.alc||0)*200/252)+'%':'—';
+  setM('compf',(S.comp||0)/255*100);
+  document.getElementById('compv').textContent=S.tx?((S.comp||0)*30/255).toFixed(1)+'dB':'—';
+  setM('swf',Math.min(100,(S.swr||0)/80*100));
+  document.getElementById('swv').textContent=S.tx?(1+0.333*(Math.exp(0.0151*(S.swr||0))-1)).toFixed(2)+':1':'—';
+  setM('idf',(S.idd||0)/255*100);
+  document.getElementById('idv').textContent=((S.idd||0)*3/255).toFixed(2)+'A';
+  setM('vddf',Math.min(100,(S.vdd||0)/203*100));
+  document.getElementById('vddv').textContent=((S.vdd||0)*13.8/203).toFixed(1)+'V';
 }
 
-// ── Demo mode ────────────────────────────────────
-let demo=true, ds=40, ds2=20;
+// ── Demo ──────────────────────────────────────────
+let demo=true,ds=40,ds2=20;
 function demoTick(){
   if(!demo) return;
-  ds  += (Math.random()-.5)*18; ds  = Math.max(5,Math.min(220,ds));
-  ds2 += (Math.random()-.5)*12; ds2 = Math.max(0,Math.min(160,ds2));
-  state.smeter_main = Math.round(ds);
-  state.smeter_sub  = Math.round(ds2);
-  if(state.tx){
-    state.po   = Math.round(200+Math.random()*40);
-    state.alc  = Math.round(180+Math.random()*30);
-    state.comp = Math.round(100+Math.random()*50);
-    state.swr  = Math.round(15+Math.random()*8);
-    state.idd  = Math.round(180+Math.random()*20);
-    state.vdd  = Math.round(195+Math.random()*8);
+  ds+=(Math.random()-.5)*18; ds=Math.max(5,Math.min(220,ds));
+  ds2+=(Math.random()-.5)*10; ds2=Math.max(0,Math.min(150,ds2));
+  S.smeter_main=Math.round(ds); S.smeter_sub=Math.round(ds2);
+  if(S.tx){
+    S.po=Math.round(200+Math.random()*40); S.alc=Math.round(180+Math.random()*30);
+    S.comp=Math.round(100+Math.random()*50); S.swr=Math.round(15+Math.random()*8);
+    S.idd=Math.round(180+Math.random()*20); S.vdd=Math.round(198+Math.random()*5);
   } else {
-    state.po=0; state.alc=0; state.comp=0; state.swr=0;
-    state.idd = Math.round(40+Math.random()*10);
-    state.vdd = Math.round(200+Math.random()*3);
+    S.po=0;S.alc=0;S.comp=0;S.swr=0;
+    S.idd=Math.round(40+Math.random()*8); S.vdd=Math.round(200+Math.random()*3);
   }
   updateDisplay();
 }
 
-// ── Status poll ──────────────────────────────────
+// ── Status poll ───────────────────────────────────
 async function pollStatus(){
-  if(!state.connected) return;
+  if(!S.connected) return;
   const s=await apiGet('status');
-  if(s&&s.freq_main){ Object.assign(state,s); demo=false; updateDisplay(); }
+  if(s&&s.freq_main){ Object.assign(S,s); demo=false; updateDisplay(); }
 }
 
-// ── Init ─────────────────────────────────────────
+// ── Init ──────────────────────────────────────────
 initKnobs();
 updateDisplay();
+['main','sub'].forEach(side=>{ drawIFCurve(side); drawAFCurve(side); });
+// Redraw curves on resize
+window.addEventListener('resize',()=>['main','sub'].forEach(s=>{drawIFCurve(s);drawAFCurve(s);}));
 setInterval(demoTick,120);
 setInterval(pollStatus,350);
 </script>
