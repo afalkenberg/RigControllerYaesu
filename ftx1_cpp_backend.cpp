@@ -1,48 +1,15 @@
 /**
  * FTX-1 CAT Controller — C++ Backend
  * ====================================
- * Provides a REST + WebSocket API over HTTP so the browser GUI can
- * control the Yaesu FTX-1 via its USB virtual COM port (CAT-1 / CAT-2).
+ * Dependencies (header-only):
+ *   httplib.h  — https://github.com/yhirose/cpp-httplib
+ *   json.hpp   — https://github.com/nlohmann/json
  *
- * Dependencies (header-only / single-file):
- *   - cpp-httplib  https://github.com/yhirose/cpp-httplib  (httplib.h)
- *   - nlohmann/json https://github.com/nlohmann/json       (json.hpp)
- *   - Platform serial: POSIX termios (Linux/macOS) or Win32 (Windows)
- *
- * Build (Linux/macOS):
- *   g++ -std=c++17 -O2 -pthread ftx1_server.cpp -o ftx1_server
- *
- * Build (Windows with MSVC):
+ * Build (MSVC):
  *   cl /std:c++17 /O2 /EHsc ftx1_server.cpp /link ws2_32.lib
  *
  * Run:
- *   ./ftx1_server --port /dev/ttyUSB0 --baud 38400 --http 8080
- *   On Windows: ftx1_server.exe --port COM5 --baud 38400 --http 8080
- *
- * API Endpoints:
- *   GET  /api/status           → full rig status JSON
- *   POST /api/frequency        → { "vfo":"MAIN|SUB", "hz": 14250000 }
- *   POST /api/mode             → { "vfo":"MAIN", "mode":"USB|LSB|CW|CWR|AM|FM|DATA|C4FM" }
- *   POST /api/ptt              → { "tx": true|false }
- *   POST /api/af_gain          → { "level": 0-255 }
- *   POST /api/rf_gain          → { "level": 0-255 }
- *   POST /api/squelch          → { "level": 0-255 }
- *   POST /api/power            → { "level": 0-100 }
- *   POST /api/vfo              → { "action":"swap|copy_main_sub|copy_sub_main|toggle_ab" }
- *   POST /api/band             → { "band": "160m"|"80m"|"40m"|"30m"|"20m"|"17m"|"15m"|"12m"|"10m"|"6m"|"2m"|"70cm" }
- *   POST /api/filter           → { "width": 0-4 }   (0=wide … 4=narrow)
- *   POST /api/nb               → { "on": true|false }
- *   POST /api/nr               → { "on": true|false }
- *   POST /api/notch            → { "on": true|false, "freq": 0-4000 }
- *   POST /api/preamp           → { "level": 0|1|2 }   (0=OFF,1=IPO,2=AMP)
- *   POST /api/att              → { "on": true|false }
- *   POST /api/lock             → { "on": true|false }
- *   POST /api/split            → { "on": true|false }
- *   POST /api/rit              → { "on": true|false, "offset": -9999..+9999 }
- *   POST /api/xit              → { "on": true|false, "offset": -9999..+9999 }
- *   POST /api/tuner            → { "action":"start|stop" }
- *   POST /api/raw              → { "cmd": "FA00014250000;" }  raw CAT passthrough
- *   WS   /ws                   → bidirectional; server pushes status every 250ms
+ *   ftx1_server.exe --port COM4 --baud 38400 --http 8080 --auto
  */
 
 #include <iostream>
@@ -57,78 +24,46 @@
 #include <functional>
 #include <cstring>
 #include <algorithm>
+#include <windows.h>
 
-// MSVC-safe clamp (std::clamp needs C++17 + <algorithm>, this always works)
+#include "httplib.h"
+#include "json.hpp"
+using json = nlohmann::json;
+
+// ── MSVC-safe clamp ───────────────────────────────────────────────────────────
 template<typename T>
 static T clamp_(T v, T lo, T hi) { return v < lo ? lo : (v > hi ? hi : v); }
 #define CLAMP(v,lo,hi) clamp_((v),(lo),(hi))
 
-// ── Header-only deps (drop these .h files next to this source) ────────────────
-#include "httplib.h"   // cpp-httplib
-#include "json.hpp"    // nlohmann::json
-using json = nlohmann::json;
-
-// ── Platform serial ───────────────────────────────────────────────────────────
-#ifdef _WIN32
-#  include <windows.h>
-#else
-#  include <fcntl.h>
-#  include <unistd.h>
-#  include <termios.h>
-#endif
-
 // =============================================================================
-//  Serial Port Abstraction
+//  Serial Port (Windows only)
 // =============================================================================
 class SerialPort {
 public:
-    SerialPort() {}
-    ~SerialPort() { close(); }
-
     bool open(const std::string& port, int baud) {
-#ifdef _WIN32
         std::string p = "\\\\.\\" + port;
         h_ = CreateFileA(p.c_str(), GENERIC_READ|GENERIC_WRITE, 0, nullptr,
                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (h_ == INVALID_HANDLE_VALUE) return false;
         DCB dcb{}; dcb.DCBlength = sizeof(dcb);
         GetCommState(h_, &dcb);
-        dcb.BaudRate = baud; dcb.ByteSize = 8;
-        dcb.Parity = NOPARITY; dcb.StopBits = ONESTOPBIT;
+        dcb.BaudRate = (DWORD)baud;
+        dcb.ByteSize = 8;
+        dcb.Parity   = NOPARITY;
+        dcb.StopBits = ONESTOPBIT;
         dcb.fRtsControl = RTS_CONTROL_DISABLE;
         dcb.fDtrControl = DTR_CONTROL_DISABLE;
         SetCommState(h_, &dcb);
         COMMTIMEOUTS to{50,0,50,0,50};
         SetCommTimeouts(h_, &to);
         open_ = true;
-#else
-        fd_ = ::open(port.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
-        if (fd_ < 0) return false;
-        struct termios tio{};
-        tcgetattr(fd_, &tio);
-        speed_t spd = B38400;
-        if (baud == 4800)  spd = B4800;
-        if (baud == 9600)  spd = B9600;
-        if (baud == 19200) spd = B19200;
-        cfsetispeed(&tio, spd); cfsetospeed(&tio, spd);
-        tio.c_cflag = CS8 | CLOCAL | CREAD;
-        tio.c_iflag = IGNPAR;
-        tio.c_oflag = 0; tio.c_lflag = 0;
-        tio.c_cc[VMIN] = 0; tio.c_cc[VTIME] = 5; // 500ms read timeout
-        tcflush(fd_, TCIFLUSH);
-        tcsetattr(fd_, TCSANOW, &tio);
-        open_ = true;
-#endif
         return true;
     }
 
     void close() {
         if (!open_) return;
-#ifdef _WIN32
         CloseHandle(h_);
-#else
-        ::close(fd_);
-#endif
+        h_    = INVALID_HANDLE_VALUE;
         open_ = false;
     }
 
@@ -136,28 +71,20 @@ public:
 
     bool write(const std::string& s) {
         if (!open_) return false;
-#ifdef _WIN32
-        DWORD w; return WriteFile(h_, s.data(), (DWORD)s.size(), &w, nullptr);
-#else
-        return ::write(fd_, s.data(), s.size()) == (ssize_t)s.size();
-#endif
+        DWORD w;
+        return WriteFile(h_, s.data(), (DWORD)s.size(), &w, nullptr) && w == s.size();
     }
 
-    // Read until ';' terminator or timeout
-    std::string readResponse(int timeoutMs = 500) {
+    // Read until ';' or timeout
+    std::string readResponse(int timeoutMs = 400) {
         if (!open_) return "";
         std::string buf;
         auto deadline = std::chrono::steady_clock::now()
                       + std::chrono::milliseconds(timeoutMs);
         while (std::chrono::steady_clock::now() < deadline) {
-            char c;
-#ifdef _WIN32
-            DWORD rd; ReadFile(h_, &c, 1, &rd, nullptr);
-            if (rd == 0) { std::this_thread::sleep_for(std::chrono::milliseconds(5)); continue; }
-#else
-            int rd = ::read(fd_, &c, 1);
-            if (rd <= 0) continue;
-#endif
+            char c; DWORD rd;
+            ReadFile(h_, &c, 1, &rd, nullptr);
+            if (rd == 0) { Sleep(5); continue; }
             buf += c;
             if (c == ';') break;
         }
@@ -165,21 +92,37 @@ public:
     }
 
 private:
-    bool open_ = false;
-#ifdef _WIN32
-    HANDLE h_ = INVALID_HANDLE_VALUE;
-#else
-    int fd_ = -1;
-#endif
+    HANDLE h_    = INVALID_HANDLE_VALUE;
+    bool   open_ = false;
+};
+
+// =============================================================================
+//  Band table  (global — visible to everything below)
+// =============================================================================
+struct BandInfo { long long defaultHz; };
+
+static const std::map<std::string, BandInfo> g_bandMap {
+    {"160m", { 1900000LL}},
+    {"80m",  { 3700000LL}},
+    {"60m",  { 5357000LL}},
+    {"40m",  { 7100000LL}},
+    {"30m",  {10125000LL}},
+    {"20m",  {14250000LL}},
+    {"17m",  {18100000LL}},
+    {"15m",  {21200000LL}},
+    {"12m",  {24900000LL}},
+    {"10m",  {28500000LL}},
+    {"6m",   {50125000LL}},
+    {"2m",   {144200000LL}},
+    {"70cm", {432100000LL}}
 };
 
 // =============================================================================
 //  CAT Command Builder
 // =============================================================================
 namespace CAT {
-    // Frequency: 9-digit Hz, zero-padded
+
     std::string setFrequency(const std::string& vfo, long long hz) {
-        // MAIN=FA, SUB=FB
         std::string cmd = (vfo == "SUB") ? "FB" : "FA";
         char buf[16]; snprintf(buf, sizeof(buf), "%09lld", hz);
         return cmd + buf + ";";
@@ -187,157 +130,145 @@ namespace CAT {
     std::string getFrequency(const std::string& vfo) {
         return (vfo == "SUB") ? "FB;" : "FA;";
     }
-    // MD: mode  0=LSB 1=USB 2=CW 3=CWR 4=AM 5=FM 6=DATA-L 7=DATA-U 8=DATA-FM 9=C4FM
-    static const std::map<std::string,std::string> modeMap;
+
+    // Mode map
+    static const std::map<std::string,std::string> modeMap {
+        {"LSB","0"},{"USB","1"},{"CW","2"},{"CWR","3"},
+        {"AM","4"},{"FM","5"},{"DATA-L","6"},{"DATA-U","7"},
+        {"DATA-FM","8"},{"C4FM","9"}
+    };
     std::string setMode(const std::string& vfo, const std::string& mode) {
         auto it = modeMap.find(mode);
-        std::string m = (it != modeMap.end()) ? it->second : "1";
+        std::string m   = (it != modeMap.end()) ? it->second : "1";
         std::string sub = (vfo == "SUB") ? "1" : "0";
         return "MD" + m + sub + ";";
     }
     std::string getMode() { return "MD0;"; }
 
+    // PTT
     std::string setPTT(bool tx) { return tx ? "TX1;" : "TX0;"; }
 
+    // Gains
     std::string setAFGain(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"AG%d%03d;", sub?1:0, CLAMP(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"AG%d%03d;",sub?1:0,CLAMP(v,0,255));
         return buf;
     }
     std::string getAFGain(bool sub=false) { return sub ? "AG1;" : "AG0;"; }
-
     std::string setRFGain(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"RG%03d;", CLAMP(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"RG%03d;",CLAMP(v,0,255));
         return buf;
     }
-
     std::string setSquelch(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"SQ%d%03d;", sub?1:0, CLAMP(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"SQ%d%03d;",sub?1:0,CLAMP(v,0,255));
         return buf;
     }
-
     std::string setPower(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PC%03d;", CLAMP(v,0,100));
+        char buf[16]; snprintf(buf,sizeof(buf),"PC%03d;",CLAMP(v,0,100));
         return buf;
     }
 
-    // VFO swap / copy
+    // VFO actions
     std::string vfoAction(const std::string& action) {
-        if (action == "swap")           return "SV;";
-        if (action == "copy_main_sub")  return "AM;";  // A→M then M→B
-        if (action == "copy_sub_main")  return "BA;";
-        if (action == "toggle_ab")      return "FT;";  // VFO A/B
+        if (action == "swap")          return "SV;";
+        if (action == "copy_main_sub") return "AM;";
+        if (action == "copy_sub_main") return "BA;";
+        if (action == "toggle_ab")     return "FT;";
         return "";
     }
 
-    // Band select: just set frequency directly — BS command unreliable on FTX-1
-    std::string setBand(const std::string& band);  // defined after BandInfo below
+    // Band — use FA directly since BS is unreliable on FTX-1
+    std::string setBand(const std::string& band) {
+        auto it = g_bandMap.find(band);
+        if (it == g_bandMap.end()) return "";
+        char fa[32];
+        snprintf(fa, sizeof(fa), "FA%09lld;", it->second.defaultHz);
+        return fa;
+    }
 
-    // Filter: NA0/NA1 (narrow on/off); FW=filter width 0000-4000
+    // Filter
     std::string setFilterWidth(int hz) {
-        char buf[16]; snprintf(buf,sizeof(buf),"FW%04d;", CLAMP(hz,0,4000));
+        char buf[16]; snprintf(buf,sizeof(buf),"FW%04d;",CLAMP(hz,0,4000));
         return buf;
     }
 
-    // Noise Blanker: NB
-    std::string setNB(bool on) { return on ? "NB1;" : "NB0;"; }
-
-    // Noise Reduction: NR
-    std::string setNR(bool on) { return on ? "NR1;" : "NR0;"; }
-
-    // Auto Notch (DNF): BC
-    std::string setAutoNotch(bool on) { return on ? "BC1;" : "BC0;"; }
-
-    // Manual Notch: BP on/off + freq
+    // DSP
+    std::string setNB(bool on)         { return on ? "NB1;" : "NB0;"; }
+    std::string setNR(bool on)         { return on ? "NR1;" : "NR0;"; }
+    std::string setAutoNotch(bool on)  { return on ? "BC1;" : "BC0;"; }
     std::string setManualNotch(bool on, int freq=1000) {
         if (!on) return "BP00000;";
-        char buf[16]; snprintf(buf,sizeof(buf),"BP1%04d;", CLAMP(freq,0,4000));
+        char buf[16]; snprintf(buf,sizeof(buf),"BP1%04d;",CLAMP(freq,0,4000));
         return buf;
     }
 
-    // Preamp / IPO: PA 0=OFF(IPO) 1=AMP1 2=AMP2
+    // RF path
     std::string setPreamp(int level) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PA0%d;", CLAMP(level,0,2));
+        char buf[16]; snprintf(buf,sizeof(buf),"PA0%d;",CLAMP(level,0,2));
         return buf;
     }
+    std::string setATT(bool on)  { return on ? "RA01;" : "RA00;"; }
+    std::string setLock(bool on) { return on ? "LK1;"  : "LK0;";  }
+    std::string setSplit(bool on){ return on ? "SP1;"  : "SP0;";  }
 
-    // Attenuator: RA
-    std::string setATT(bool on) { return on ? "RA01;" : "RA00;"; }
-
-    // Lock: LK
-    std::string setLock(bool on) { return on ? "LK1;" : "LK0;"; }
-
-    // Split: SP
-    std::string setSplit(bool on) { return on ? "SP1;" : "SP0;"; }
-
-    // RIT: RT on/off, RU/RD offset
+    // RIT / XIT
     std::string setRIT(bool on) { return on ? "RT1;" : "RT0;"; }
     std::string setRITOffset(int hz) {
-        // RC clears, then RU/RD in 10Hz steps
         std::string cmds = "RC;";
-        if (hz > 0) { char buf[16]; snprintf(buf,sizeof(buf),"RU%04d;",hz/10); cmds+=buf; }
+        if (hz > 0) { char buf[16]; snprintf(buf,sizeof(buf),"RU%04d;", hz/10); cmds+=buf; }
         else if (hz < 0) { char buf[16]; snprintf(buf,sizeof(buf),"RD%04d;",-hz/10); cmds+=buf; }
         return cmds;
     }
-
-    // XIT: XT on/off (uses same offset control)
     std::string setXIT(bool on) { return on ? "XT1;" : "XT0;"; }
 
-    // Tuner: AC
+    // Tuner
     std::string tuner(const std::string& action) {
         if (action == "start") return "AC010;";
         if (action == "stop")  return "AC000;";
         return "";
     }
 
-    // Meter read: RM (S-meter, power, SWR, ALC, IDD)
+    // Meters  — FTX-1 returns 6-digit value e.g. RM1000042;
     std::string readMeter(int type) {
-        // RM1=S-meter RM2=PO RM3=ALC RM4=COMP RM5=VDD RM6=IDD RM7=SWR
         char buf[8]; snprintf(buf,sizeof(buf),"RM%d;",type);
         return buf;
     }
 
-    // Auto Information: AI — enable AI mode so rig pushes changes
+    // Auto-information
     std::string setAI(bool on) { return on ? "AI2;" : "AI0;"; }
 
-    // IF: read full IF status packet (includes freq, mode, RIT, etc.)
+    // Full status packet
     std::string getIF() { return "IF;"; }
+
 } // namespace CAT
 
 // =============================================================================
 //  Rig State
 // =============================================================================
 struct RigState {
-    long long  freqMain  = 14250000;
-    long long  freqSub   = 7100000;
-    std::string modeMain = "USB";
-    std::string modeSub  = "USB";
-    bool tx      = false;
-    int  afGain  = 128;
-    int  rfGain  = 255;
-    int  squelch = 0;
-    int  power   = 100;
-    bool nb      = false;
-    bool nr      = false;
-    bool autoNotch = false;
-    bool manualNotch = false;
-    int  notchFreq = 1000;
-    int  preamp  = 0;        // 0=IPO 1=AMP1 2=AMP2
-    bool att     = false;
-    bool lock    = false;
-    bool split   = false;
-    bool rit     = false;
+    long long   freqMain  = 14250000;
+    long long   freqSub   = 7100000;
+    std::string modeMain  = "USB";
+    std::string modeSub   = "USB";
+    bool tx       = false;
+    int  afGain   = 128;
+    int  rfGain   = 255;
+    int  squelch  = 0;
+    int  power    = 100;
+    bool nb       = false;
+    bool nr       = false;
+    bool autoNotch    = false;
+    bool manualNotch  = false;
+    int  notchFreq    = 1000;
+    int  preamp   = 0;
+    bool att      = false;
+    bool lock     = false;
+    bool split    = false;
+    bool rit      = false;
     int  ritOffset = 0;
-    bool xit     = false;
-    int  xitOffset = 0;
-    // meters (0-255)
-    int smeter = 0;
-    int po     = 0;
-    int alc    = 0;
-    int swr    = 0;
-    int idd    = 0;
-    int vdd    = 0;
-    bool connected = false;
+    bool xit      = false;
     std::string band = "20m";
+    int smeter = 0, po = 0, alc = 0, swr = 0, idd = 0, vdd = 0;
+    bool connected = false;
 };
 
 // =============================================================================
@@ -345,15 +276,11 @@ struct RigState {
 // =============================================================================
 class FTX1Controller {
 public:
-    FTX1Controller() {}
-
     bool connect(const std::string& port, int baud) {
         std::lock_guard<std::mutex> lk(mx_);
         if (!serial_.open(port, baud)) return false;
         state_.connected = true;
-        // Enable AI mode for automatic updates
         serial_.write(CAT::setAI(true));
-        // Kick off polling thread
         running_ = true;
         pollThread_ = std::thread([this]{ pollLoop(); });
         return true;
@@ -368,15 +295,14 @@ public:
         state_.connected = false;
     }
 
-    // ── Public API (thread-safe) ──────────────────────────────────────────────
+    // ── Public API ────────────────────────────────────────────────────────────
 
     bool setFrequency(const std::string& vfo, long long hz) {
         std::lock_guard<std::mutex> lk(mx_);
         if (vfo == "SUB") state_.freqSub  = hz;
         else              state_.freqMain = hz;
-        // suppress poll overwrite for 1.5 seconds after a set
-        suppressPollUntil_ = std::chrono::steady_clock::now()
-                           + std::chrono::milliseconds(1500);
+        suppressUntil_ = std::chrono::steady_clock::now()
+                       + std::chrono::milliseconds(1500);
         return send(CAT::setFrequency(vfo, hz));
     }
 
@@ -406,18 +332,17 @@ public:
     bool setBand(const std::string& b) {
         std::lock_guard<std::mutex> lk(mx_);
         state_.band = b;
-        // update local freq state to the band default too
-        auto it = bandMap.find(b);
-        if (it != bandMap.end()) state_.freqMain = it->second.defaultHz;
-        suppressPollUntil_ = std::chrono::steady_clock::now()
-                           + std::chrono::milliseconds(1500);
+        auto it = g_bandMap.find(b);
+        if (it != g_bandMap.end()) state_.freqMain = it->second.defaultHz;
+        suppressUntil_ = std::chrono::steady_clock::now()
+                       + std::chrono::milliseconds(1500);
         return send(CAT::setBand(b));
     }
 
     bool setFilterWidth(int hz) { std::lock_guard<std::mutex> lk(mx_); return send(CAT::setFilterWidth(hz)); }
-    bool setNB(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.nb=on;         return send(CAT::setNB(on)); }
-    bool setNR(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.nr=on;         return send(CAT::setNR(on)); }
-    bool setAutoNotch(bool on) { std::lock_guard<std::mutex> lk(mx_); state_.autoNotch=on; return send(CAT::setAutoNotch(on)); }
+    bool setNB(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.nb=on;           return send(CAT::setNB(on)); }
+    bool setNR(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.nr=on;           return send(CAT::setNR(on)); }
+    bool setAutoNotch(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.autoNotch=on;   return send(CAT::setAutoNotch(on)); }
     bool setManualNotch(bool on, int f=1000) {
         std::lock_guard<std::mutex> lk(mx_);
         state_.manualNotch=on; state_.notchFreq=f;
@@ -427,6 +352,7 @@ public:
     bool setATT(bool on)  { std::lock_guard<std::mutex> lk(mx_); state_.att=on;    return send(CAT::setATT(on)); }
     bool setLock(bool on) { std::lock_guard<std::mutex> lk(mx_); state_.lock=on;   return send(CAT::setLock(on)); }
     bool setSplit(bool on){ std::lock_guard<std::mutex> lk(mx_); state_.split=on;  return send(CAT::setSplit(on)); }
+
     bool setRIT(bool on, int offset=0) {
         std::lock_guard<std::mutex> lk(mx_);
         state_.rit=on; state_.ritOffset=offset;
@@ -438,11 +364,9 @@ public:
     bool sendRaw(const std::string& cmd) {
         std::lock_guard<std::mutex> lk(mx_);
         send(cmd);
-        std::string r = serial_.readResponse();
-        lastRaw_ = r;
+        lastRaw_ = serial_.readResponse(500);
         return true;
     }
-
     std::string getLastRaw() { std::lock_guard<std::mutex> lk(mx_); return lastRaw_; }
 
     json getStatus() {
@@ -480,7 +404,6 @@ public:
         };
     }
 
-    // Register a callback for push-based status updates (used by WS)
     void onStatusUpdate(std::function<void(json)> cb) { statusCb_ = cb; }
 
 private:
@@ -489,80 +412,84 @@ private:
         return serial_.write(cmd);
     }
 
-    // Parse IF; response: IF[14-digit freq][5-digit rit][+/-][rit on][xit on][mem][tx][mode]...;
+    // Parse IF; response
     void parseIF(const std::string& r) {
         if (r.size() < 30) return;
-        // freq: chars 2-10 (9 digits)
-        state_.freqMain = std::stoll(r.substr(2,9));
-        // mode: char 21  0=LSB 1=USB 2=CW 3=CWR 4=AM 5=FM 6=DATA-L 7=DATA-U 8=DATA-FM 9=C4FM
-        static const char* modes[] = {"LSB","USB","CW","CWR","AM","FM","DATA-L","DATA-U","DATA-FM","C4FM"};
-        int modeIdx = r[21] - '0';
-        if (modeIdx >= 0 && modeIdx <= 9) state_.modeMain = modes[modeIdx];
-        // tx: char 24  0=RX 1=TX
+        try { state_.freqMain = std::stoll(r.substr(2,9)); } catch(...) {}
+        static const char* modes[] = {
+            "LSB","USB","CW","CWR","AM","FM","DATA-L","DATA-U","DATA-FM","C4FM"
+        };
+        int mi = r[21] - '0';
+        if (mi >= 0 && mi <= 9) state_.modeMain = modes[mi];
         state_.tx = (r.size() > 24 && r[24] == '1');
     }
 
-    // Parse meter response: RM[type][6-digit value];  e.g. RM1000000;
+    // Parse RM; — FTX-1 returns 6-digit value e.g. RM1000042;
     void parseRM(const std::string& r) {
         if (r.size() < 9) return;
-        int type = r[2] - '0';
-        int val  = std::stoi(r.substr(3, 6));   // 6 digits
-        // scale to 0-255 (raw value is 0-255 stored in 6 digits)
-        val = std::min(val, 255);
-        switch(type) {
-            case 1: state_.smeter = val; break;
-            case 2: state_.po     = val; break;
-            case 3: state_.alc    = val; break;
-            case 7: state_.swr    = val; break;
-            case 6: state_.idd    = val; break;
-            case 5: state_.vdd    = val; break;
-        }
+        try {
+            int type = r[2] - '0';
+            int val  = std::stoi(r.substr(3,6));
+            val = CLAMP(val, 0, 255);
+            switch(type) {
+                case 1: state_.smeter = val; break;
+                case 2: state_.po     = val; break;
+                case 3: state_.alc    = val; break;
+                case 7: state_.swr    = val; break;
+                case 6: state_.idd    = val; break;
+                case 5: state_.vdd    = val; break;
+            }
+        } catch(...) {}
     }
 
     void pollLoop() {
         while (running_) {
             {
                 std::lock_guard<std::mutex> lk(mx_);
-                // skip frequency/mode poll if a set command was just sent
-                bool suppressed = std::chrono::steady_clock::now() < suppressPollUntil_;
+                bool suppressed = std::chrono::steady_clock::now() < suppressUntil_;
                 if (serial_.isOpen()) {
                     if (!suppressed) {
+                        // Full status
                         serial_.write(CAT::getIF());
-                        std::string r = serial_.readResponse(300);
+                        std::string r = serial_.readResponse(400);
                         if (r.size() > 2 && r.substr(0,2) == "IF") parseIF(r);
 
+                        // Sub VFO freq
                         serial_.write(CAT::getFrequency("SUB"));
-                        r = serial_.readResponse(200);
-                        if (r.size() >= 11 && r.substr(0,2) == "FB")
-                            state_.freqSub = std::stoll(r.substr(2,9));
+                        r = serial_.readResponse(300);
+                        if (r.size() >= 11 && r.substr(0,2) == "FB") {
+                            try { state_.freqSub = std::stoll(r.substr(2,9)); } catch(...) {}
+                        }
                     }
-                    // meters always poll (not affected by freq suppress)
+
+                    // S-meter always
                     serial_.write(CAT::readMeter(1));
-                    std::string r = serial_.readResponse(150);
+                    std::string r = serial_.readResponse(200);
                     if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
 
+                    // TX meters only when transmitting
                     if (state_.tx) {
                         for (int m : {2,3,7}) {
                             serial_.write(CAT::readMeter(m));
-                            r = serial_.readResponse(150);
+                            r = serial_.readResponse(200);
                             if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
                         }
                     }
                 }
             }
             if (statusCb_) statusCb_(getStatus());
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
     }
 
-    SerialPort serial_;
-    RigState   state_;
-    std::mutex mx_;
+    SerialPort   serial_;
+    RigState     state_;
+    std::mutex   mx_;
     std::atomic<bool> running_{false};
-    std::thread pollThread_;
-    std::string lastRaw_;
+    std::thread  pollThread_;
+    std::string  lastRaw_;
     std::function<void(json)> statusCb_;
-    std::chrono::steady_clock::time_point suppressPollUntil_;
+    std::chrono::steady_clock::time_point suppressUntil_;
 };
 
 // =============================================================================
@@ -571,186 +498,152 @@ private:
 void setupRoutes(httplib::Server& svr, FTX1Controller& rig) {
     using namespace httplib;
 
-    auto jsonResp = [](Response& res, const json& j) {
+    auto ok = [](Response& res, bool v) {
+        res.set_content(json{{"ok",v}}.dump(), "application/json");
+        res.set_header("Access-Control-Allow-Origin","*");
+    };
+    auto okj = [](Response& res, const json& j) {
         res.set_content(j.dump(), "application/json");
-        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Origin","*");
     };
 
-    svr.Options(".*", [](const Request&, Response& res){
-        res.set_header("Access-Control-Allow-Origin", "*");
-        res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+    svr.Options(".*",[](const Request&,Response& res){
+        res.set_header("Access-Control-Allow-Origin","*");
+        res.set_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");
+        res.set_header("Access-Control-Allow-Headers","Content-Type");
     });
 
-    // ── Status ────────────────────────────────────────────────────────────────
-    svr.Get("/api/status", [&](const Request&, Response& res){
-        jsonResp(res, rig.getStatus());
+    svr.Get("/api/status",[&](const Request&,Response& res){ okj(res,rig.getStatus()); });
+
+    svr.Post("/api/connect",[&](const Request& req,Response& res){
+        auto j=json::parse(req.body,nullptr,false);
+        ok(res, rig.connect(j.value("port","COM4"), j.value("baud",38400)));
+    });
+    svr.Post("/api/disconnect",[&](const Request&,Response& res){
+        rig.disconnect(); ok(res,true);
     });
 
-    // ── Connect/Disconnect ────────────────────────────────────────────────────
-    svr.Post("/api/connect", [&](const Request& req, Response& res){
-        auto j = json::parse(req.body, nullptr, false);
-        std::string port = j.value("port", "/dev/ttyUSB0");
-        int baud = j.value("baud", 38400);
-        bool ok = rig.connect(port, baud);
-        jsonResp(res, {{"ok", ok}});
-    });
-    svr.Post("/api/disconnect", [&](const Request&, Response& res){
-        rig.disconnect();
-        jsonResp(res, {{"ok", true}});
-    });
-
-    // ── Frequency ─────────────────────────────────────────────────────────────
-    svr.Post("/api/frequency", [&](const Request& req, Response& res){
-        auto j = json::parse(req.body, nullptr, false);
-        std::string vfo = j.value("vfo", "MAIN");
-        long long hz = j.value("hz", 14250000LL);
-        jsonResp(res, {{"ok", rig.setFrequency(vfo, hz)}});
-    });
-
-    // ── Mode ──────────────────────────────────────────────────────────────────
-    svr.Post("/api/mode", [&](const Request& req, Response& res){
-        auto j = json::parse(req.body, nullptr, false);
-        jsonResp(res, {{"ok", rig.setMode(j.value("vfo","MAIN"), j.value("mode","USB"))}});
-    });
-
-    // ── PTT ───────────────────────────────────────────────────────────────────
-    svr.Post("/api/ptt", [&](const Request& req, Response& res){
-        auto j = json::parse(req.body, nullptr, false);
-        jsonResp(res, {{"ok", rig.setPTT(j.value("tx", false))}});
-    });
-
-    // ── Gains / Levels ────────────────────────────────────────────────────────
-    svr.Post("/api/af_gain",  [&](const Request& req, Response& res){
+    svr.Post("/api/frequency",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setAFGain(j.value("level",128))}});
+        ok(res, rig.setFrequency(j.value("vfo","MAIN"), j.value("hz",14250000LL)));
     });
-    svr.Post("/api/rf_gain",  [&](const Request& req, Response& res){
+    svr.Post("/api/mode",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setRFGain(j.value("level",255))}});
+        ok(res, rig.setMode(j.value("vfo","MAIN"), j.value("mode","USB")));
     });
-    svr.Post("/api/squelch",  [&](const Request& req, Response& res){
+    svr.Post("/api/ptt",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setSquelch(j.value("level",0))}});
+        ok(res, rig.setPTT(j.value("tx",false)));
     });
-    svr.Post("/api/power",    [&](const Request& req, Response& res){
+    svr.Post("/api/af_gain",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setPower(j.value("level",100))}});
+        ok(res, rig.setAFGain(j.value("level",128)));
     });
-
-    // ── VFO ───────────────────────────────────────────────────────────────────
-    svr.Post("/api/vfo",  [&](const Request& req, Response& res){
+    svr.Post("/api/rf_gain",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.vfoAction(j.value("action","toggle_ab"))}});
+        ok(res, rig.setRFGain(j.value("level",255)));
     });
-
-    // ── Band ──────────────────────────────────────────────────────────────────
-    svr.Post("/api/band", [&](const Request& req, Response& res){
+    svr.Post("/api/squelch",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setBand(j.value("band","20m"))}});
+        ok(res, rig.setSquelch(j.value("level",0)));
     });
-
-    // ── Filter ────────────────────────────────────────────────────────────────
-    svr.Post("/api/filter",[&](const Request& req, Response& res){
+    svr.Post("/api/power",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setFilterWidth(j.value("width",2400))}});
+        ok(res, rig.setPower(j.value("level",100)));
     });
-
-    // ── DSP ───────────────────────────────────────────────────────────────────
-    svr.Post("/api/nb",   [&](const Request& req, Response& res){
+    svr.Post("/api/vfo",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setNB(j.value("on",false))}});
+        ok(res, rig.vfoAction(j.value("action","toggle_ab")));
     });
-    svr.Post("/api/nr",   [&](const Request& req, Response& res){
+    svr.Post("/api/band",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setNR(j.value("on",false))}});
+        ok(res, rig.setBand(j.value("band","20m")));
     });
-    svr.Post("/api/notch",[&](const Request& req, Response& res){
+    svr.Post("/api/filter",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        bool on = j.value("on",false);
-        int  f  = j.value("freq",1000);
-        bool ok = on ? rig.setManualNotch(on,f) : rig.setAutoNotch(false) && rig.setManualNotch(false);
-        jsonResp(res,{{"ok",ok}});
+        ok(res, rig.setFilterWidth(j.value("width",2400)));
     });
-
-    // ── RF Path ───────────────────────────────────────────────────────────────
-    svr.Post("/api/preamp",[&](const Request& req, Response& res){
+    svr.Post("/api/nb",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setPreamp(j.value("level",0))}});
+        ok(res, rig.setNB(j.value("on",false)));
     });
-    svr.Post("/api/att",  [&](const Request& req, Response& res){
+    svr.Post("/api/nr",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setATT(j.value("on",false))}});
+        ok(res, rig.setNR(j.value("on",false)));
     });
-
-    // ── Ops ───────────────────────────────────────────────────────────────────
-    svr.Post("/api/lock", [&](const Request& req, Response& res){
+    svr.Post("/api/notch",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setLock(j.value("on",false))}});
+        ok(res, rig.setManualNotch(j.value("on",false), j.value("freq",1000)));
     });
-    svr.Post("/api/split",[&](const Request& req, Response& res){
+    svr.Post("/api/preamp",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setSplit(j.value("on",false))}});
+        ok(res, rig.setPreamp(j.value("level",0)));
     });
-    svr.Post("/api/rit",  [&](const Request& req, Response& res){
+    svr.Post("/api/att",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setRIT(j.value("on",false),j.value("offset",0))}});
+        ok(res, rig.setATT(j.value("on",false)));
     });
-    svr.Post("/api/xit",  [&](const Request& req, Response& res){
+    svr.Post("/api/lock",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.setXIT(j.value("on",false))}});
+        ok(res, rig.setLock(j.value("on",false)));
     });
-    svr.Post("/api/tuner",[&](const Request& req, Response& res){
+    svr.Post("/api/split",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
-        jsonResp(res,{{"ok",rig.tuner(j.value("action","start"))}});
+        ok(res, rig.setSplit(j.value("on",false)));
     });
-
-    // ── Raw CAT passthrough ───────────────────────────────────────────────────
-    svr.Post("/api/raw",  [&](const Request& req, Response& res){
+    svr.Post("/api/rit",[&](const Request& req,Response& res){
+        auto j=json::parse(req.body,nullptr,false);
+        ok(res, rig.setRIT(j.value("on",false), j.value("offset",0)));
+    });
+    svr.Post("/api/xit",[&](const Request& req,Response& res){
+        auto j=json::parse(req.body,nullptr,false);
+        ok(res, rig.setXIT(j.value("on",false)));
+    });
+    svr.Post("/api/tuner",[&](const Request& req,Response& res){
+        auto j=json::parse(req.body,nullptr,false);
+        ok(res, rig.tuner(j.value("action","start")));
+    });
+    svr.Post("/api/raw",[&](const Request& req,Response& res){
         auto j=json::parse(req.body,nullptr,false);
         rig.sendRaw(j.value("cmd",""));
-        jsonResp(res,{{"ok",true},{"response",rig.getLastRaw()}});
+        okj(res, {{"ok",true},{"response",rig.getLastRaw()}});
     });
+
+    // Serve GUI files from current directory
+    svr.set_mount_point("/",".");
 }
 
 // =============================================================================
 //  main
 // =============================================================================
 int main(int argc, char** argv) {
-    std::string port   = "/dev/ttyUSB0";
-    int         baud   = 38400;
+    std::string port     = "COM4";
+    int         baud     = 38400;
     int         httpPort = 8080;
-    bool        autoConnect = false;
+    bool        autoConn = false;
 
-    for (int i = 1; i < argc; ++i) {
+    for (int i=1; i<argc; ++i) {
         std::string a = argv[i];
-        if ((a == "--port" || a == "-p") && i+1 < argc) port = argv[++i];
-        else if ((a == "--baud" || a == "-b") && i+1 < argc) baud = std::stoi(argv[++i]);
-        else if ((a == "--http") && i+1 < argc) httpPort = std::stoi(argv[++i]);
-        else if (a == "--auto") autoConnect = true;
+        if ((a=="--port"||a=="-p") && i+1<argc) port = argv[++i];
+        else if ((a=="--baud"||a=="-b") && i+1<argc) baud = std::stoi(argv[++i]);
+        else if (a=="--http" && i+1<argc) httpPort = std::stoi(argv[++i]);
+        else if (a=="--auto") autoConn = true;
     }
 
     FTX1Controller rig;
 
-    if (autoConnect) {
-        std::cout << "[FTX-1] Auto-connecting to " << port << " @ " << baud << " baud\n";
-        if (!rig.connect(port, baud)) {
-            std::cerr << "[FTX-1] Failed to open serial port. "
-                         "You can still connect via API.\n";
-        } else {
-            std::cout << "[FTX-1] Connected.\n";
-        }
+    if (autoConn) {
+        std::cout << "[FTX-1] Connecting to " << port << " @ " << baud << " baud...\n";
+        if (rig.connect(port, baud))
+            std::cout << "[FTX-1] Connected OK.\n";
+        else
+            std::cerr << "[FTX-1] Serial open failed. Connect via GUI.\n";
     }
 
     httplib::Server svr;
     setupRoutes(svr, rig);
 
-    // Serve the GUI HTML directly if it lives next to the binary
-    svr.set_mount_point("/", ".");
-
-    std::cout << "[FTX-1] HTTP server on http://localhost:" << httpPort << "\n";
-    std::cout << "[FTX-1] Open ftx1_gui.html in your browser.\n";
-
+    std::cout << "[FTX-1] HTTP server at http://localhost:" << httpPort << "\n";
     svr.listen("0.0.0.0", httpPort);
     rig.disconnect();
     return 0;
