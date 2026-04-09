@@ -217,7 +217,7 @@ body{background:var(--bg);font-family:'Courier New',monospace;
 .fselb.onm{background:var(--amber-dim);border-color:#4a3500;color:var(--amber)}
 
 /* Filter curve canvas */
-.fcurve{width:100%;height:80px;background:#050e05;border:1px solid #1a2a1a;
+.fcurve{width:100%;height:90px;background:#050e05;border:1px solid #1a2a1a;
   border-radius:3px;display:block;margin-bottom:4px}
 
 /* ── CONNECT / RAW ── */
@@ -936,108 +936,182 @@ async function sendAF(side){
 // ── Draw IF curve ─────────────────────────────────
 function drawIFCurve(side){
   const cv=document.getElementById(`ifc-${side}`);
+  if(!cv) return;
   const f=side==='main'?S.if_main:S.if_sub;
   const color=side==='main'?'#e8a020':'#10c8c8';
-  const notchColor='#e03020';
-  const W=cv.width=cv.offsetWidth||300, H=cv.height||80;
+  const W=cv.width=cv.offsetWidth||300, H=cv.height=90;
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,W,H);
-  // Background grid
-  ctx.strokeStyle='#1a2a1a'; ctx.lineWidth=1;
-  for(let x=0;x<W;x+=W/8){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
-  for(let y=0;y<H;y+=H/4){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
-  // Frequency range 0-4000 Hz displayed
-  const fToX=(fq)=>(fq/4000)*W;
-  const center=2000+f.shift; // center frequency with shift
+  const PAD=2, TOP=14, BOT=H-10;
+  const plotH=BOT-TOP;
+  // Grid
+  ctx.strokeStyle='#182818'; ctx.lineWidth=1;
+  for(let i=0;i<=8;i++){const x=PAD+i*(W-PAD*2)/8;ctx.beginPath();ctx.moveTo(x,TOP);ctx.lineTo(x,BOT);ctx.stroke();}
+  for(let i=0;i<=4;i++){const y=TOP+i*plotH/4;ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();}
+  const fMax=4000, fToX=fq=>PAD+(fq/fMax)*(W-PAD*2);
+  const center=2000+f.shift;
   const half=f.width/2;
-  const lo=Math.max(0,center-half), hi=Math.min(4000,center+half);
-  // Passband fill
-  ctx.fillStyle=color+'20';
-  ctx.fillRect(fToX(lo),0,fToX(hi)-fToX(lo),H);
-  // Passband edges
-  ctx.strokeStyle=color; ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(fToX(lo),H); ctx.lineTo(fToX(lo),H*0.15);
-  ctx.lineTo(fToX(hi),H*0.15); ctx.lineTo(fToX(hi),H);
-  ctx.stroke();
-  // Contour boost/cut indicator
-  if(f.contour!==0){
-    const cx=fToX(center);
-    const cy=f.contour>0?H*0.05:H*0.4;
-    ctx.strokeStyle='#d060d080'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
-    ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle='#d060d0'; ctx.font='7px monospace';
-    ctx.fillText((f.contour>0?'+':'')+f.contour+'dB',cx-12,cy+3);
+  const lo=Math.max(0,center-half), hi=Math.min(fMax,center+half);
+  const loX=fToX(lo), hiX=fToX(hi);
+  // Build response curve point by point across full frequency range
+  // Response = flat at TOP inside passband, rolls off outside, with contour dent
+  const NPTS=W;
+  const pts=[];
+  // Contour: bell curve centred at center, width ~300Hz, amplitude = contour dB
+  // Map: contour dB -40..+20 → pixel shift in curve ±plotH*0.45
+  const contourPxScale = plotH*0.45/40;
+  for(let i=0;i<NPTS;i++){
+    const x=PAD+i*(W-PAD*2)/(NPTS-1);
+    const fq=(x-PAD)/(W-PAD*2)*fMax;
+    // Base: inside passband = TOP, outside rolls off steeply (2px slope)
+    let y;
+    const slopeW=60; // px rolloff width
+    if(fq<lo){
+      const dist=fToX(lo)-x;
+      y=TOP+Math.min(plotH, dist*plotH/slopeW);
+    } else if(fq>hi){
+      const dist=x-fToX(hi);
+      y=TOP+Math.min(plotH, dist*plotH/slopeW);
+    } else {
+      y=TOP;
+    }
+    // Contour: Gaussian bell centred at passband center, σ≈300Hz
+    if(f.contour!==0 && fq>=lo && fq<=hi){
+      const sigma=300;
+      const bell=Math.exp(-0.5*Math.pow((fq-center)/sigma,2));
+      // positive contour = boost = curve goes UP (smaller y), negative = dip = DOWN
+      y -= f.contour * contourPxScale * bell;
+      y=Math.max(TOP-plotH*0.3, Math.min(BOT, y));
+    }
+    pts.push({x,y});
   }
-  // Notch marker
-  const nx=fToX(f.notch);
-  ctx.strokeStyle=notchColor+'80'; ctx.lineWidth=1; ctx.setLineDash([3,2]);
-  ctx.beginPath(); ctx.moveTo(nx,0); ctx.lineTo(nx,H); ctx.stroke();
-  ctx.setLineDash([]);
-  // Labels
+  // Fill
+  ctx.beginPath();
+  ctx.moveTo(PAD,BOT);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(W-PAD,BOT);
+  ctx.closePath();
+  ctx.fillStyle=color+'18'; ctx.fill();
+  // Stroke
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+  // Notch: narrow inverted triangle pointing up from baseline
+  if(f.notch_on||true){ // always show notch marker position
+    const nx=fToX(f.notch);
+    const notchW=6; // half-width in px
+    const notchDepth=plotH*0.85;
+    // Only draw notch inside passband
+    if(f.notch>=lo && f.notch<=hi){
+      ctx.beginPath();
+      ctx.moveTo(nx-notchW,BOT);
+      ctx.lineTo(nx,TOP+4);
+      ctx.lineTo(nx+notchW,BOT);
+      ctx.closePath();
+      ctx.fillStyle='#e0302060'; ctx.fill();
+      ctx.strokeStyle='#e03020'; ctx.lineWidth=1.5; ctx.stroke();
+    } else {
+      // Just a dashed line if notch is outside passband
+      ctx.strokeStyle='#e0302050'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+      ctx.beginPath();ctx.moveTo(nx,TOP);ctx.lineTo(nx,BOT);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  // Freq axis labels
   ctx.fillStyle='#304030'; ctx.font='6px monospace';
-  ['0','1k','2k','3k','4k'].forEach((l,i)=>ctx.fillText(l,i*W/4+2,H-2));
+  ['0','500','1k','1.5k','2k','2.5k','3k','3.5k','4k'].forEach((l,i)=>{
+    ctx.fillText(l,PAD+i*(W-PAD*2)/8-3,H-1);
+  });
+  // Info label
   ctx.fillStyle=color; ctx.font='7px monospace';
-  ctx.fillText(`W:${f.width}Hz S:${f.shift>0?'+':''}${f.shift}`,4,10);
+  ctx.fillText(`W:${f.width} S:${f.shift>=0?'+':''}${f.shift} N:${f.notch}Hz`,PAD+2,TOP-2);
 }
 
 // ── Draw Audio filter curve ───────────────────────
 function drawAFCurve(side){
   const cv=document.getElementById(`afc-${side}`);
+  if(!cv) return;
   const f=side==='main'?S.af_filt_main:S.af_filt_sub;
   const color=side==='main'?'#e8a020':'#10c8c8';
-  const W=cv.width=cv.offsetWidth||300, H=cv.height||80;
+  const W=cv.width=cv.offsetWidth||300, H=cv.height=90;
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,W,H);
+  const PAD=2, TOP=14, BOT=H-10;
+  const plotH=BOT-TOP;
   // Grid
-  ctx.strokeStyle='#1a2a1a'; ctx.lineWidth=1;
-  for(let x=0;x<W;x+=W/8){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=0;y<H;y+=H/4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-  // Compute LCUT/HCUT frequencies
-  const lFreq = f.lcut===0 ? 0 : 50+f.lcut*50;       // 0=OFF else 100-1050
-  const hFreq = f.hcut===0 ? 4000 : 650+f.hcut*50;    // 0=OFF else 700-4000
-  const maxF=4000;
-  const fToX=(fq)=>(fq/maxF)*W;
-  // Draw response curve
+  ctx.strokeStyle='#182818'; ctx.lineWidth=1;
+  for(let i=0;i<=8;i++){const x=PAD+i*(W-PAD*2)/8;ctx.beginPath();ctx.moveTo(x,TOP);ctx.lineTo(x,BOT);ctx.stroke();}
+  for(let i=0;i<=4;i++){const y=TOP+i*plotH/4;ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();}
+  // Compute actual frequencies
+  // LCUT: index 0=OFF, 1-20 → 100-1050Hz (50Hz steps)
+  // HCUT: index 0=OFF → treat as 4000Hz, 1-67 → 700-4000Hz (50Hz steps)
+  const lFreq = f.lcut===0 ? 0   : 50 + f.lcut*50;
+  const hFreq = f.hcut===0 ? 4000 : 650 + f.hcut*50;
+  const fMax=4000, fToX=fq=>PAD+(fq/fMax)*(W-PAD*2);
+  // Build curve: flat passband with rolloff slopes
+  // Slope steepness: 6dB/oct = gentle, 18dB/oct = steep
+  // We model this as power-law rolloff; higher exponent = steeper
+  const lExp = f.lslope===0 ? 1.5 : 4.0;  // 6dB/oct gentle, 18dB/oct steep
+  const hExp = f.hslope===0 ? 1.5 : 4.0;
+  const NPTS=W;
+  const pts=[];
+  for(let i=0;i<NPTS;i++){
+    const x=PAD+i*(W-PAD*2)/(NPTS-1);
+    const fq=(x-PAD)/(W-PAD*2)*fMax;
+    let gain=1.0;
+    if(lFreq>0 && fq<lFreq) gain*=Math.pow(Math.max(0,fq)/lFreq, lExp);
+    if(fq>hFreq) gain*=Math.pow(hFreq/Math.max(fq,1), hExp);
+    gain=Math.max(0,Math.min(1,gain));
+    // y: gain=1 → TOP, gain=0 → BOT
+    const y=BOT - gain*plotH;
+    pts.push({x,y});
+  }
+  // Fill under curve
   ctx.beginPath();
-  ctx.moveTo(0,H);
-  if(lFreq>0){
-    const roll=f.lslope===0?0.3:0.08;
-    for(let x=0;x<=W;x++){
-      const freq=x/W*maxF;
-      let gain=1;
-      if(freq<lFreq) gain=Math.pow(freq/lFreq,1/(roll+0.01));
-      const y=H-(gain*(H*0.75));
-      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-  } else {
-    ctx.lineTo(0,H*0.25);
-  }
-  if(hFreq<maxF){
-    const fToXh=fToX(hFreq);
-    ctx.lineTo(fToXh,H*0.25);
-    const roll=f.hslope===0?0.3:0.08;
-    for(let x=Math.floor(fToXh);x<=W;x++){
-      const freq=x/W*maxF;
-      let gain=1;
-      if(freq>hFreq) gain=Math.pow(hFreq/freq,1/(roll+0.01));
-      ctx.lineTo(x,H-(gain*(H*0.75)));
-    }
-  } else {
-    ctx.lineTo(W,H*0.25);
-  }
-  ctx.lineTo(W,H);
+  ctx.moveTo(PAD,BOT);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(W-PAD,BOT);
   ctx.closePath();
   ctx.fillStyle=color+'18'; ctx.fill();
+  // Stroke curve
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
   ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
-  // Labels
+  // LCUT frequency marker line
+  if(lFreq>0){
+    const lx=fToX(lFreq);
+    ctx.strokeStyle=color+'60'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+    ctx.beginPath();ctx.moveTo(lx,TOP);ctx.lineTo(lx,BOT);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=color+'80'; ctx.font='6px monospace';
+    ctx.fillText(lFreq+'Hz',lx+2,BOT-4);
+  }
+  // HCUT frequency marker line
+  if(hFreq<fMax){
+    const hx=fToX(hFreq);
+    ctx.strokeStyle=color+'60'; ctx.lineWidth=1; ctx.setLineDash([2,2]);
+    ctx.beginPath();ctx.moveTo(hx,TOP);ctx.lineTo(hx,BOT);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=color+'80'; ctx.font='6px monospace';
+    ctx.fillText(hFreq+'Hz',hx-22,BOT-4);
+  }
+  // Slope indicators at -3dB points
+  const slope3db=fq=>{
+    let g=1;
+    if(lFreq>0&&fq<lFreq) g*=Math.pow(fq/lFreq,lExp);
+    if(fq>hFreq) g*=Math.pow(hFreq/fq,hExp);
+    return g;
+  };
+  // Freq axis labels
   ctx.fillStyle='#304030'; ctx.font='6px monospace';
-  ['0','1k','2k','3k','4k'].forEach((l,i)=>ctx.fillText(l,i*W/4+2,H-2));
-  const lLabel=f.lcut===0?'OFF':LCUT_FREQS[f.lcut]+'Hz';
-  const hLabel=f.hcut===0?'OFF':HCUT_FREQS[f.hcut]+'Hz';
+  ['0','500','1k','1.5k','2k','2.5k','3k','3.5k','4k'].forEach((l,i)=>{
+    ctx.fillText(l,PAD+i*(W-PAD*2)/8-3,H-1);
+  });
+  // Info label top
+  const lLabel=lFreq===0?'OFF':lFreq+'Hz';
+  const hLabel=hFreq===4000?'OFF':hFreq+'Hz';
   ctx.fillStyle=color; ctx.font='7px monospace';
-  ctx.fillText(`L:${lLabel} H:${hLabel}`,4,10);
+  ctx.fillText(`L:${lLabel}/${f.lslope===0?'6':'18'}dB  H:${hLabel}/${f.hslope===0?'6':'18'}dB`,PAD+2,TOP-2);
 }
 
 // ── Knobs ─────────────────────────────────────────
@@ -1213,8 +1287,8 @@ async function pollStatus(){
 // ── Init ──────────────────────────────────────────
 initKnobs();
 updateDisplay();
-['main','sub'].forEach(side=>{ drawIFCurve(side); drawAFCurve(side); });
-// Redraw curves on resize
+// Delay curve draw so canvases have correct layout width
+setTimeout(()=>['main','sub'].forEach(s=>{drawIFCurve(s);drawAFCurve(s);}),50);
 window.addEventListener('resize',()=>['main','sub'].forEach(s=>{drawIFCurve(s);drawAFCurve(s);}));
 setInterval(demoTick,120);
 setInterval(pollStatus,350);
