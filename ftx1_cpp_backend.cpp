@@ -58,6 +58,11 @@
 #include <cstring>
 #include <algorithm>
 
+// MSVC-safe clamp (std::clamp needs C++17 + <algorithm>, this always works)
+template<typename T>
+static T clamp_(T v, T lo, T hi) { return v < lo ? lo : (v > hi ? hi : v); }
+#define CLAMP(v,lo,hi) clamp_((v),(lo),(hi))
+
 // ── Header-only deps (drop these .h files next to this source) ────────────────
 #include "httplib.h"   // cpp-httplib
 #include "json.hpp"    // nlohmann::json
@@ -183,47 +188,35 @@ namespace CAT {
         return (vfo == "SUB") ? "FB;" : "FA;";
     }
     // MD: mode  0=LSB 1=USB 2=CW 3=CWR 4=AM 5=FM 6=DATA-L 7=DATA-U 8=DATA-FM 9=C4FM
-    static const std::map<std::string,std::string> modeMap {
-        {"LSB","0"},{"USB","1"},{"CW","2"},{"CWR","3"},
-        {"AM","4"},{"FM","5"},{"DATA-L","6"},{"DATA-U","7"},
-        {"DATA-FM","8"},{"C4FM","9"}
-    };
+    static const std::map<std::string,std::string> modeMap;
     std::string setMode(const std::string& vfo, const std::string& mode) {
         auto it = modeMap.find(mode);
         std::string m = (it != modeMap.end()) ? it->second : "1";
-        // MD command: P1=mode digit, P2=0=MAIN 1=SUB
         std::string sub = (vfo == "SUB") ? "1" : "0";
         return "MD" + m + sub + ";";
     }
     std::string getMode() { return "MD0;"; }
 
-    // PTT: TX0=RX, TX1=TX
-    std::string setPTT(bool tx)    { return tx ? "TX1;" : "TX0;"; }
+    std::string setPTT(bool tx) { return tx ? "TX1;" : "TX0;"; }
 
-    // AF Gain: AG0 0-255 (MAIN), AG1 0-255 (SUB)
     std::string setAFGain(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"AG%d%03d;", sub?1:0, std::clamp(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"AG%d%03d;", sub?1:0, CLAMP(v,0,255));
         return buf;
     }
-    std::string getAFGain(bool sub=false) {
-        return sub ? "AG1;" : "AG0;";
-    }
+    std::string getAFGain(bool sub=false) { return sub ? "AG1;" : "AG0;"; }
 
-    // RF Gain: RG  000-255
     std::string setRFGain(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"RG%03d;", std::clamp(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"RG%03d;", CLAMP(v,0,255));
         return buf;
     }
 
-    // Squelch: SQ0 000-255 (MAIN)
     std::string setSquelch(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"SQ%d%03d;", sub?1:0, std::clamp(v,0,255));
+        char buf[16]; snprintf(buf,sizeof(buf),"SQ%d%03d;", sub?1:0, CLAMP(v,0,255));
         return buf;
     }
 
-    // Power: PC 000-100
     std::string setPower(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PC%03d;", std::clamp(v,0,100));
+        char buf[16]; snprintf(buf,sizeof(buf),"PC%03d;", CLAMP(v,0,100));
         return buf;
     }
 
@@ -249,7 +242,7 @@ namespace CAT {
 
     // Filter: NA0/NA1 (narrow on/off); FW=filter width 0000-4000
     std::string setFilterWidth(int hz) {
-        char buf[16]; snprintf(buf,sizeof(buf),"FW%04d;", std::clamp(hz,0,4000));
+        char buf[16]; snprintf(buf,sizeof(buf),"FW%04d;", CLAMP(hz,0,4000));
         return buf;
     }
 
@@ -265,13 +258,13 @@ namespace CAT {
     // Manual Notch: BP on/off + freq
     std::string setManualNotch(bool on, int freq=1000) {
         if (!on) return "BP00000;";
-        char buf[16]; snprintf(buf,sizeof(buf),"BP1%04d;", std::clamp(freq,0,4000));
+        char buf[16]; snprintf(buf,sizeof(buf),"BP1%04d;", CLAMP(freq,0,4000));
         return buf;
     }
 
     // Preamp / IPO: PA 0=OFF(IPO) 1=AMP1 2=AMP2
     std::string setPreamp(int level) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PA0%d;", std::clamp(level,0,2));
+        char buf[16]; snprintf(buf,sizeof(buf),"PA0%d;", CLAMP(level,0,2));
         return buf;
     }
 
