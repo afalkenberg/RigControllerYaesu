@@ -144,7 +144,7 @@ namespace CAT {
         auto it = modeMap.find(mode);
         std::string m   = (it != modeMap.end()) ? it->second : "1";
         std::string sub = (vfo == "SUB") ? "1" : "0";
-        return "MD" + m + sub + ";";
+        return "MD" + sub + m + ";";  // FTX-1: MD[vfo][mode]  e.g. MD01=MAIN USB
     }
     std::string getMode() { return "MD0;"; }
 
@@ -419,12 +419,16 @@ private:
     void parseIF(const std::string& r) {
         if (r.size() < 30) return;
         try { state_.freqMain = std::stoll(r.substr(2,9)); } catch(...) {}
+        // FTX-1 IF response: IF[9 freq][5 rit offset][+/-][rit][xit][mem ch][tx][mode]
+        // mode is at position 21, tx at position 28
         static const char* modes[] = {
             "LSB","USB","CW","CWR","AM","FM","DATA-L","DATA-U","DATA-FM","C4FM"
         };
-        int mi = r[21] - '0';
-        if (mi >= 0 && mi <= 9) state_.modeMain = modes[mi];
-        state_.tx = (r.size() > 24 && r[24] == '1');
+        if (r.size() > 21) {
+            int mi = r[21] - '0';
+            if (mi >= 0 && mi <= 9) state_.modeMain = modes[mi];
+        }
+        if (r.size() > 28) state_.tx = (r[28] == '1');
     }
 
     // Parse RM; — FTX-1 returns 6-digit value e.g. RM1000042;
