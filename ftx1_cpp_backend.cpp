@@ -229,15 +229,17 @@ namespace CAT {
         return "";
     }
 
-    // Band Select: BS P1 = band index
-    static const std::map<std::string,std::string> bandMap {
-        {"160m","00"},{"80m","01"},{"60m","02"},{"40m","03"},{"30m","04"},
-        {"20m","05"},{"17m","06"},{"15m","07"},{"12m","08"},{"10m","09"},
-        {"6m","10"},{"2m","11"},{"70cm","12"}
-    };
+    // Band Select: BS + set a sensible default frequency for that band
+    struct BandInfo { std::string bsCode; long long defaultHz; };
+    static const std::map<std::string, BandInfo> bandMap;
     std::string setBand(const std::string& band) {
         auto it = bandMap.find(band);
-        return it != bandMap.end() ? "BS" + it->second + ";" : "";
+        if (it == bandMap.end()) return "";
+        // BS selects the band, then FA sets a default freq within it
+        std::string bs = "BS" + it->second.bsCode + ";";
+        char fa[32];
+        snprintf(fa, sizeof(fa), "FA%09lld;", it->second.defaultHz);
+        return bs + fa;   // send both as one string
     }
 
     // Filter: NA0/NA1 (narrow on/off); FW=filter width 0000-4000
@@ -382,6 +384,9 @@ public:
         std::lock_guard<std::mutex> lk(mx_);
         if (vfo == "SUB") state_.freqSub  = hz;
         else              state_.freqMain = hz;
+        // suppress poll overwrite for 1.5 seconds after a set
+        suppressPollUntil_ = std::chrono::steady_clock::now()
+                           + std::chrono::milliseconds(1500);
         return send(CAT::setFrequency(vfo, hz));
     }
 
@@ -411,6 +416,11 @@ public:
     bool setBand(const std::string& b) {
         std::lock_guard<std::mutex> lk(mx_);
         state_.band = b;
+        // update local freq state to the band default too
+        auto it = CAT::bandMap.find(b);
+        if (it != CAT::bandMap.end()) state_.freqMain = it->second.defaultHz;
+        suppressPollUntil_ = std::chrono::steady_clock::now()
+                           + std::chrono::milliseconds(1500);
         return send(CAT::setBand(b));
     }
 
@@ -521,30 +531,30 @@ private:
         while (running_) {
             {
                 std::lock_guard<std::mutex> lk(mx_);
+                // skip frequency/mode poll if a set command was just sent
+                bool suppressed = std::chrono::steady_clock::now() < suppressPollUntil_;
                 if (serial_.isOpen()) {
-                    // Drain any AI pushes first
-                    // Then actively poll meters & full status
-                    serial_.write(CAT::getIF());
-                    std::string r = serial_.readResponse(200);
-                    if (r.substr(0,2) == "IF") parseIF(r);
+                    if (!suppressed) {
+                        serial_.write(CAT::getIF());
+                        std::string r = serial_.readResponse(300);
+                        if (r.size() > 2 && r.substr(0,2) == "IF") parseIF(r);
 
-                    serial_.write(CAT::readMeter(1)); // S-meter
-                    r = serial_.readResponse(100);
-                    if (r.substr(0,2) == "RM") parseRM(r);
+                        serial_.write(CAT::getFrequency("SUB"));
+                        r = serial_.readResponse(200);
+                        if (r.size() >= 11 && r.substr(0,2) == "FB")
+                            state_.freqSub = std::stoll(r.substr(2,9));
+                    }
+                    // meters always poll (not affected by freq suppress)
+                    serial_.write(CAT::readMeter(1));
+                    std::string r = serial_.readResponse(150);
+                    if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
 
                     if (state_.tx) {
                         for (int m : {2,3,7}) {
                             serial_.write(CAT::readMeter(m));
-                            r = serial_.readResponse(100);
-                            if (r.substr(0,2) == "RM") parseRM(r);
+                            r = serial_.readResponse(150);
+                            if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
                         }
-                    }
-
-                    // Freq sub
-                    serial_.write(CAT::getFrequency("SUB"));
-                    r = serial_.readResponse(100);
-                    if (r.size() >= 11 && r.substr(0,2) == "FB") {
-                        state_.freqSub = std::stoll(r.substr(2,9));
                     }
                 }
             }
@@ -560,6 +570,7 @@ private:
     std::thread pollThread_;
     std::string lastRaw_;
     std::function<void(json)> statusCb_;
+    std::chrono::steady_clock::time_point suppressPollUntil_;
 };
 
 // =============================================================================
