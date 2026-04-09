@@ -230,13 +230,7 @@ namespace CAT {
     }
 
     // Band select: just set frequency directly — BS command unreliable on FTX-1
-    std::string setBand(const std::string& band) {
-        auto it = bandMap.find(band);
-        if (it == bandMap.end()) return "";
-        char fa[32];
-        snprintf(fa, sizeof(fa), "FA%09lld;", it->second.defaultHz);
-        return fa;  // FA only, no BS
-    }
+    std::string setBand(const std::string& band);  // defined after BandInfo below
 
     // Filter: NA0/NA1 (narrow on/off); FW=filter width 0000-4000
     std::string setFilterWidth(int hz) {
@@ -413,8 +407,8 @@ public:
         std::lock_guard<std::mutex> lk(mx_);
         state_.band = b;
         // update local freq state to the band default too
-        auto it = CAT::bandMap.find(b);
-        if (it != CAT::bandMap.end()) state_.freqMain = it->second.defaultHz;
+        auto it = bandMap.find(b);
+        if (it != bandMap.end()) state_.freqMain = it->second.defaultHz;
         suppressPollUntil_ = std::chrono::steady_clock::now()
                            + std::chrono::milliseconds(1500);
         return send(CAT::setBand(b));
