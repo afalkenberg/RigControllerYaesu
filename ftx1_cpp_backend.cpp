@@ -71,6 +71,7 @@ public:
     }
 
     bool isOpen() const { return open_; }
+    HANDLE handle()     { return h_; }  // for direct reads in poll loop
 
     bool write(const std::string& s) {
         if (!open_) return false;
@@ -304,8 +305,6 @@ public:
         std::lock_guard<std::mutex> lk(mx_);
         if (vfo == "SUB") state_.freqSub  = hz;
         else              state_.freqMain = hz;
-        suppressUntil_ = std::chrono::steady_clock::now()
-                       + std::chrono::milliseconds(1500);
         return send(CAT::setFrequency(vfo, hz));
     }
 
@@ -337,8 +336,6 @@ public:
         state_.band = b;
         auto it = g_bandMap.find(b);
         if (it != g_bandMap.end()) state_.freqMain = it->second.defaultHz;
-        suppressUntil_ = std::chrono::steady_clock::now()
-                       + std::chrono::milliseconds(1500);
         return send(CAT::setBand(b));
     }
 
@@ -415,20 +412,10 @@ private:
         return serial_.write(cmd);
     }
 
-    // Parse IF; response
-    void parseIF(const std::string& r) {
-        if (r.size() < 30) return;
-        try { state_.freqMain = std::stoll(r.substr(2,9)); } catch(...) {}
-        // FTX-1 IF response: IF[9 freq][5 rit offset][+/-][rit][xit][mem ch][tx][mode]
-        // mode is at position 21, tx at position 28
-        static const char* modes[] = {
-            "LSB","USB","CW","CWR","AM","FM","DATA-L","DATA-U","DATA-FM","C4FM"
-        };
-        if (r.size() > 21) {
-            int mi = r[21] - '0';
-            if (mi >= 0 && mi <= 9) state_.modeMain = modes[mi];
-        }
-        if (r.size() > 28) state_.tx = (r[28] == '1');
+    // TX status poll via TX; command
+    void parseTX(const std::string& r) {
+        if (r.size() >= 3 && r.substr(0,2) == "TX")
+            state_.tx = (r[2] == '1');
     }
 
     // Parse RM; — FTX-1 returns 6-digit value e.g. RM1000042;
@@ -453,39 +440,62 @@ private:
         while (running_) {
             {
                 std::lock_guard<std::mutex> lk(mx_);
-                bool suppressed = std::chrono::steady_clock::now() < suppressUntil_;
                 if (serial_.isOpen()) {
-                    if (!suppressed) {
-                        // Full status
-                        serial_.write(CAT::getIF());
-                        std::string r = serial_.readResponse(400);
-                        if (r.size() > 2 && r.substr(0,2) == "IF") parseIF(r);
-
-                        // Sub VFO freq
-                        serial_.write(CAT::getFrequency("SUB"));
-                        r = serial_.readResponse(300);
-                        if (r.size() >= 11 && r.substr(0,2) == "FB") {
-                            try { state_.freqSub = std::stoll(r.substr(2,9)); } catch(...) {}
+                    // Pure listener — never send read commands
+                    // Just drain whatever the radio pushes via AI mode
+                    // and parse any complete packets we find
+                    std::string buf;
+                    // Read all available bytes into buffer
+                    for (int i = 0; i < 20; i++) {
+                        char c; DWORD rd;
+                        ReadFile(serial_.handle(), &c, 1, &rd, nullptr);
+                        if (rd == 0) break;
+                        buf += c;
+                        if (c == ';') {
+                            parsePacket(buf);
+                            buf.clear();
                         }
                     }
-
-                    // S-meter always
-                    serial_.write(CAT::readMeter(1));
+                    // Only poll S-meter actively — it is not pushed by AI
+                    serial_.write("RM1;");
                     std::string r = serial_.readResponse(200);
                     if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
-
-                    // TX meters only when transmitting
-                    if (state_.tx) {
-                        for (int m : {2,3,7}) {
-                            serial_.write(CAT::readMeter(m));
-                            r = serial_.readResponse(200);
-                            if (r.size() > 2 && r.substr(0,2) == "RM") parseRM(r);
-                        }
-                    }
                 }
             }
             if (statusCb_) statusCb_(getStatus());
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+    }
+
+    // Parse any packet the radio pushes
+    void parsePacket(const std::string& r) {
+        if (r.size() < 3) return;
+        std::string cmd = r.substr(0,2);
+
+        if (cmd == "FA" && r.size() >= 11) {
+            try { state_.freqMain = std::stoll(r.substr(2,9)); } catch(...) {}
+        }
+        else if (cmd == "FB" && r.size() >= 11) {
+            try { state_.freqSub = std::stoll(r.substr(2,9)); } catch(...) {}
+        }
+        else if (cmd == "MD" && r.size() >= 4) {
+            static const char* modes[] = {
+                "LSB","USB","CW","CWR","AM","FM",
+                "DATA-L","DATA-U","DATA-FM","C4FM"
+            };
+            // MD[vfo][mode];  vfo=r[2], mode=r[3]
+            int mi = r[3] - '0';
+            bool isSub = (r[2] == '1');
+            if (mi >= 0 && mi <= 9) {
+                if (isSub) state_.modeSub  = modes[mi];
+                else        state_.modeMain = modes[mi];
+            }
+        }
+        else if (cmd == "TX" && r.size() >= 3) {
+            state_.tx = (r[2] == '1');
+        }
+        else if (cmd == "RM") {
+            parseRM(r);
         }
     }
 
