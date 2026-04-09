@@ -417,7 +417,8 @@ body{background:var(--bg);font-family:'Courier New',monospace;
     <div class="fslrow"><label>SHIFT</label><input type="range" id="shift-m" min="-1000" max="1000" step="10" value="0" oninput="ifChg('main','shift',+this.value)"><span id="sv-shift-m">0 Hz</span></div>
     <div class="fslrow"><label>WIDTH</label><input type="range" id="width-m" min="50" max="4000" step="50" value="2400" oninput="ifChg('main','width',+this.value)"><span id="sv-width-m">2400 Hz</span></div>
     <div class="fslrow"><label>NOTCH</label><input type="range" id="notch-m" min="0" max="4000" step="10" value="1000" oninput="ifChg('main','notch',+this.value)"><span id="sv-notch-m">1000 Hz</span></div>
-    <div class="fslrow"><label>CONTOUR</label><input type="range" id="contour-m" min="-40" max="20" step="1" value="0" oninput="ifChg('main','contour',+this.value)"><span id="sv-contour-m">0 dB</span></div>
+    <div class="fslrow"><label>CONTOUR LVL</label><input type="range" id="contour-m" min="-40" max="20" step="1" value="0" oninput="ifChg('main','contour',+this.value)"><span id="sv-contour-m">0 dB</span></div>
+    <div class="fslrow"><label>CONTOUR FREQ</label><input type="range" id="contourf-m" min="0" max="4000" step="10" value="2000" oninput="ifChg('main','contourf',+this.value)"><span id="sv-contourf-m">2000 Hz</span></div>
   </div>
 
   <!-- IF FILTER SUB -->
@@ -427,7 +428,8 @@ body{background:var(--bg);font-family:'Courier New',monospace;
     <div class="fslrow"><label>SHIFT</label><input type="range" id="shift-s" min="-1000" max="1000" step="10" value="0" oninput="ifChg('sub','shift',+this.value)"><span id="sv-shift-s">0 Hz</span></div>
     <div class="fslrow"><label>WIDTH</label><input type="range" id="width-s" min="50" max="4000" step="50" value="2400" oninput="ifChg('sub','width',+this.value)"><span id="sv-width-s">2400 Hz</span></div>
     <div class="fslrow"><label>NOTCH</label><input type="range" id="notch-s" min="0" max="4000" step="10" value="1000" oninput="ifChg('sub','notch',+this.value)"><span id="sv-notch-s">1000 Hz</span></div>
-    <div class="fslrow"><label>CONTOUR</label><input type="range" id="contour-s" min="-40" max="20" step="1" value="0" oninput="ifChg('sub','contour',+this.value)"><span id="sv-contour-s">0 dB</span></div>
+    <div class="fslrow"><label>CONTOUR LVL</label><input type="range" id="contour-s" min="-40" max="20" step="1" value="0" oninput="ifChg('sub','contour',+this.value)"><span id="sv-contour-s">0 dB</span></div>
+    <div class="fslrow"><label>CONTOUR FREQ</label><input type="range" id="contourf-s" min="0" max="4000" step="10" value="2000" oninput="ifChg('sub','contourf',+this.value)"><span id="sv-contourf-s">2000 Hz</span></div>
   </div>
 
   <!-- AUDIO FILTER MAIN -->
@@ -609,8 +611,8 @@ const S = {
   preamp_main:0, preamp_sub:0, agc_main:'SLOW', agc_sub:'SLOW',
   rit_offset:0, smeter_main:0, smeter_sub:0, comp:0, alc:0, po:0, swr:0, idd:0, vdd:0,
   connected:false,
-  if_main:{shift:0,width:2400,notch:1000,contour:0},
-  if_sub: {shift:0,width:2400,notch:1000,contour:0},
+  if_main:{shift:0,width:2400,notch:1000,contour:0,contourf:2000},
+  if_sub: {shift:0,width:2400,notch:1000,contour:0,contourf:2000},
   af_filt_main:{lcut:0,lslope:0,hcut:60,hslope:0},
   af_filt_sub: {lcut:0,lslope:0,hcut:60,hslope:0},
   // EQ bands [freq_idx, level_db, bwidth] for proc-off and proc-on
@@ -728,20 +730,34 @@ document.getElementById('raw-in').addEventListener('keydown',e=>{if(e.key==='Ent
 const ifTmr={};
 function ifChg(side,param,v){
   const f=side==='main'?S.if_main:S.if_sub;f[param]=v;
-  const el=document.getElementById(`sv-${param}-${side[0]}`);
-  if(el)el.textContent=param==='contour'?(v>=0?'+':'')+v+' dB':v+' Hz';
+  const sid=side[0];
+  const elId=param==='contour'?`sv-contour-${sid}`:param==='contourf'?`sv-contourf-${sid}`:`sv-${param}-${sid}`;
+  const el=document.getElementById(elId);
+  if(el){
+    if(param==='contour') el.textContent=(v>=0?'+':'')+v+' dB';
+    else el.textContent=v+' Hz';
+  }
   clearTimeout(ifTmr[side+param]);ifTmr[side+param]=setTimeout(()=>sendIF(side),150);
   drawIFCurve(side);
 }
 async function sendIF(side){
   const f=side==='main'?S.if_main:S.if_sub;
-  const ss=f.shift>=0?'+':'-', sa=String(Math.abs(f.shift)).padStart(4,'0');
-  await api('raw',{cmd:`IS0${ss}${sa};`});
+  // IF Shift: IS0[+/-][4 digits]
+  const ss=f.shift>=0?'+':'-',sa=String(Math.abs(f.shift)).padStart(4,'0');
+  await api('raw',{cmd:'IS0'+ss+sa+';'});
+  // Width: SH0[2 digit index]
   const wi=Math.min(99,Math.round((f.width-50)/50));
-  await api('raw',{cmd:`SH0${String(wi).padStart(2,'0')};`});
-  await api('raw',{cmd:`BP1${String(f.notch).padStart(4,'0')};`});
-  const cs=f.contour>=0?'+':'-', ca=String(Math.abs(f.contour)).padStart(2,'0');
-  await api('raw',{cmd:`CO${cs}${ca}05;`});
+  await api('raw',{cmd:'SH0'+String(wi).padStart(2,'0')+';'});
+  // Manual Notch: BP1[4 digit Hz]
+  await api('raw',{cmd:'BP1'+String(f.notch).padStart(4,'0')+';'});
+  // Contour: CO[+/-level 2digits][width 2digits]
+  // Contour freq is set via EX menu — approximate index: 0-255 mapped from 100-3200Hz
+  const cs=f.contour>=0?'+':'-',ca=String(Math.abs(f.contour)).padStart(2,'0');
+  const cwidx=String(Math.round(5)).padStart(2,'0'); // default Q width
+  await api('raw',{cmd:'CO'+cs+ca+cwidx+';'});
+  // Contour frequency via EX menu (approx menu item)
+  const cfIdx=Math.round((f.contourf-100)/12.5); // 100-3300Hz range → 0-255
+  await api('raw',{cmd:'EX01080'+String(Math.max(0,Math.min(255,cfIdx))).padStart(3,'0')+';'});
 }
 
 // ── Audio Filter ──────────────────────────────────────────────────────
@@ -861,9 +877,9 @@ function drawIFCurve(side){
     if(fq<lo){const d=fX(lo)-x;y=TOP+Math.min(PH,d*PH/Math.max(1,slopeW));}
     else if(fq>hi){const d=x-fX(hi);y=TOP+Math.min(PH,d*PH/Math.max(1,slopeW));}
     else y=TOP;
-    // Contour (Gaussian bell)
-    if(f.contour!==0&&fq>=lo&&fq<=hi){
-      const bell=Math.exp(-0.5*Math.pow((fq-center)/250,2));
+    // Contour (Gaussian bell) — centred at contourf, independent of passband shift
+    if(f.contour!==0){
+      const bell=Math.exp(-0.5*Math.pow((fq-f.contourf)/250,2));
       y-=f.contour*cPx*bell;
       y=Math.max(TOP-PH*0.25,Math.min(BOT,y));
     }
