@@ -231,10 +231,16 @@ namespace CAT {
         return "";
     }
 
-    // Meters  — FTX-1 returns 6-digit value e.g. RM1000042;
+    // Meters — FTX-1 meter IDs:
+    // 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
+    // Response: RM[id][6-digit value]; e.g. RM1000128;
     std::string readMeter(int type) {
         char buf[8]; snprintf(buf,sizeof(buf),"RM%d;",type);
         return buf;
+    }
+    // Poll all meters in one burst
+    std::string readAllMeters() {
+        return "RM1;RM2;RM3;RM4;RM5;RM6;RM7;RM8;";
     }
 
     // Auto-information
@@ -271,7 +277,16 @@ struct RigState {
     int  ritOffset = 0;
     bool xit      = false;
     std::string band = "20m";
-    int smeter = 0, po = 0, alc = 0, swr = 0, idd = 0, vdd = 0;
+    // Meters (raw 0-255)
+    // RM1=S-MAIN RM2=S-SUB RM3=COMP RM4=ALC RM5=PO RM6=SWR RM7=IDD RM8=VDD
+    int smeter_main = 0;
+    int smeter_sub  = 0;
+    int comp  = 0;
+    int alc   = 0;
+    int po    = 0;
+    int swr   = 0;
+    int idd   = 0;
+    int vdd   = 0;
     bool connected = false;
 };
 
@@ -395,9 +410,11 @@ public:
             {"rit_offset",   state_.ritOffset},
             {"xit",          state_.xit},
             {"band",         state_.band},
-            {"smeter",       state_.smeter},
-            {"po",           state_.po},
+            {"smeter_main",  state_.smeter_main},
+            {"smeter_sub",   state_.smeter_sub},
+            {"comp",         state_.comp},
             {"alc",          state_.alc},
+            {"po",           state_.po},
             {"swr",          state_.swr},
             {"idd",          state_.idd},
             {"vdd",          state_.vdd}
@@ -418,20 +435,23 @@ private:
             state_.tx = (r[2] == '1');
     }
 
-    // Parse RM; — FTX-1 returns 6-digit value e.g. RM1000042;
+    // Parse RM; — FTX-1: RM[id][6-digit raw]; e.g. RM1000128;
+    // IDs: 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
     void parseRM(const std::string& r) {
         if (r.size() < 9) return;
         try {
-            int type = r[2] - '0';
-            int val  = std::stoi(r.substr(3,6));
+            int id  = r[2] - '0';
+            int val = std::stoi(r.substr(3, 6));
             val = CLAMP(val, 0, 255);
-            switch(type) {
-                case 1: state_.smeter = val; break;
-                case 2: state_.po     = val; break;
-                case 3: state_.alc    = val; break;
-                case 7: state_.swr    = val; break;
-                case 6: state_.idd    = val; break;
-                case 5: state_.vdd    = val; break;
+            switch(id) {
+                case 1: state_.smeter_main = val; break;
+                case 2: state_.smeter_sub  = val; break;
+                case 3: state_.comp        = val; break;
+                case 4: state_.alc         = val; break;
+                case 5: state_.po          = val; break;
+                case 6: state_.swr         = val; break;
+                case 7: state_.idd         = val; break;
+                case 8: state_.vdd         = val; break;
             }
         } catch(...) {}
     }

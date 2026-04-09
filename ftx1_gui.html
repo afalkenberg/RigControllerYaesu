@@ -80,18 +80,29 @@ body{background:var(--bg);font-family:'Courier New',monospace;
 /* ── METERS BAR ──────────────────────────────── */
 #meters{width:100%;max-width:1400px;background:#090d09;
   border:1px solid #1a2a1a;border-radius:6px;
-  padding:6px 14px;display:flex;gap:10px;align-items:center}
+  padding:6px 14px;display:flex;flex-direction:column;gap:5px}
+.meter-row{display:flex;gap:10px;align-items:center}
 .mblock{flex:1;display:flex;flex-direction:column;gap:2px}
-.mlabel{font-size:8px;letter-spacing:2px;color:var(--txt2)}
-.mbar{height:10px;background:#0a1a0a;border:1px solid #1a2a1a;border-radius:2px;overflow:hidden}
-.mfill{height:100%;width:0%;transition:width .15s;border-radius:2px}
-.mfill.s{background:linear-gradient(90deg,var(--green) 55%,#a0d000 80%,#e08000 92%,#e03000 100%)}
-.mfill.p{background:linear-gradient(90deg,var(--blue) 60%,#00a0ff 80%,#e08000 92%,#e03000 100%)}
-.mfill.a{background:var(--cyan)}
-.mfill.w{background:linear-gradient(90deg,var(--green) 40%,#e0a000 70%,#e03000 90%)}
-.mfill.i{background:var(--blue)}
-.mval{font-size:9px;color:var(--txt2);text-align:right}
-.mticks{display:flex;justify-content:space-between;font-size:7px;color:var(--txt2);opacity:.5}
+.mlabel{font-size:8px;letter-spacing:2px;color:var(--txt2);
+  display:flex;justify-content:space-between;align-items:center}
+.mlabel .mvtag{font-size:7px;padding:0 3px;border-radius:2px}
+.mlabel .mvtag.m{background:var(--amber-dim);color:var(--amber)}
+.mlabel .mvtag.s{background:var(--cyan-dim);color:var(--cyan)}
+.mbar{height:10px;background:#0a1a0a;border:1px solid #1a2a1a;border-radius:2px;
+  overflow:hidden;position:relative}
+.mfill{height:100%;width:0%;transition:width .12s;border-radius:2px}
+.mfill.sm{background:linear-gradient(90deg,#18d060 0%,#18d060 50%,#a0d000 70%,#e08000 85%,#e03000 100%)}
+.mfill.ss{background:linear-gradient(90deg,#10c8c8 0%,#10c8c8 50%,#20a0e0 70%,#e08000 85%,#e03000 100%)}
+.mfill.po{background:linear-gradient(90deg,#2090ff 0%,#2090ff 70%,#e08000 88%,#e03000 100%)}
+.mfill.alc{background:#10c8c8}
+.mfill.swr{background:linear-gradient(90deg,#18d060 0%,#18d060 40%,#e0a000 65%,#e03000 85%)}
+.mfill.idd{background:#2090ff}
+.mfill.vdd{background:#e8a020}
+.mfill.comp{background:#d060d0}
+.mval{font-size:9px;color:var(--txt2);min-width:40px;text-align:right}
+.mticks{display:flex;justify-content:space-between;font-size:7px;color:var(--txt2);opacity:.4}
+.mrow-label{font-size:8px;letter-spacing:3px;color:var(--txt2);
+  padding:2px 0;border-bottom:1px solid #1a2a1a;margin-bottom:2px}
 
 /* ── MAIN LAYOUT: 3 columns ──────────────────── */
 #body{width:100%;max-width:1400px;display:grid;
@@ -298,30 +309,45 @@ body{background:var(--bg);font-family:'Courier New',monospace;
 
 <!-- METERS -->
 <div id="meters">
-  <div class="mblock" style="flex:2.2">
-    <div class="mlabel">S-METER</div>
-    <div class="mbar"><div class="mfill s" id="sf"></div></div>
-    <div class="mticks"><span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span>+10</span><span>+20</span><span>+40</span><span>+60</span></div>
+  <!-- RX meters: dual S-meters -->
+  <div class="meter-row">
+    <div class="mblock" style="flex:2">
+      <div class="mlabel">S-METER <span class="mvtag m">MAIN</span> <span class="mval" id="smv">S0</span></div>
+      <div class="mbar"><div class="mfill sm" id="smf"></div></div>
+      <div class="mticks"><span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span>+10</span><span>+20</span><span>+40</span><span>+60</span></div>
+    </div>
+    <div class="mblock" style="flex:2">
+      <div class="mlabel">S-METER <span class="mvtag s">SUB</span> <span class="mval" id="ssv">S0</span></div>
+      <div class="mbar"><div class="mfill ss" id="ssf"></div></div>
+      <div class="mticks"><span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span>+10</span><span>+20</span><span>+40</span><span>+60</span></div>
+    </div>
   </div>
-  <div class="mblock">
-    <div class="mlabel">RF POWER</div>
-    <div class="mbar"><div class="mfill p" id="pof"></div></div>
-    <div class="mval" id="pov">0W</div>
-  </div>
-  <div class="mblock">
-    <div class="mlabel">ALC</div>
-    <div class="mbar"><div class="mfill a" id="alf"></div></div>
-    <div class="mval" id="alv">—</div>
-  </div>
-  <div class="mblock">
-    <div class="mlabel">SWR</div>
-    <div class="mbar"><div class="mfill w" id="swf"></div></div>
-    <div class="mval" id="swv">—</div>
-  </div>
-  <div class="mblock">
-    <div class="mlabel">IDD (A)</div>
-    <div class="mbar"><div class="mfill i" id="idf"></div></div>
-    <div class="mval" id="idv">—</div>
+  <!-- TX meters -->
+  <div class="meter-row">
+    <div class="mblock">
+      <div class="mlabel">RF POWER <span class="mval" id="pov">—</span></div>
+      <div class="mbar"><div class="mfill po" id="pof"></div></div>
+    </div>
+    <div class="mblock">
+      <div class="mlabel">ALC <span class="mval" id="alv">—</span></div>
+      <div class="mbar"><div class="mfill alc" id="alf"></div></div>
+    </div>
+    <div class="mblock">
+      <div class="mlabel">COMP <span class="mval" id="compv">—</span></div>
+      <div class="mbar"><div class="mfill comp" id="compf"></div></div>
+    </div>
+    <div class="mblock">
+      <div class="mlabel">SWR <span class="mval" id="swv">—</span></div>
+      <div class="mbar"><div class="mfill swr" id="swf"></div></div>
+    </div>
+    <div class="mblock">
+      <div class="mlabel">IDD (A) <span class="mval" id="idv">—</span></div>
+      <div class="mbar"><div class="mfill idd" id="idf"></div></div>
+    </div>
+    <div class="mblock">
+      <div class="mlabel">VDD (V) <span class="mval" id="vddv">—</span></div>
+      <div class="mbar"><div class="mfill vdd" id="vddf"></div></div>
+    </div>
   </div>
 </div>
 
@@ -901,7 +927,57 @@ function updateModeBtns(){
   });
 }
 
-// ── Meters ───────────────────────────────────────
+// ── Meter conversions (matching FTX-1 Python project) ────────────────
+// S-meter: raw 0-255, raw128=S9, raw255=+60dB, non-linear
+const S_RAW = {S1:14, S3:42, S5:81, S7:103, S9:128, P10:165, P20:202, P40:233, P60:255};
+function sFromRaw(r) {
+  r = Math.max(0,Math.min(255,Math.round(r)));
+  if (r < S_RAW.S1) return {pct:0,   txt:'S0'};
+  if (r < S_RAW.S3) return {pct:14,  txt:'S1'};
+  if (r < S_RAW.S5) return {pct:28,  txt:'S3'};
+  if (r < S_RAW.S7) return {pct:44,  txt:'S5'};
+  if (r < S_RAW.S9) return {pct:58,  txt:'S7'};
+  if (r < S_RAW.P10){return {pct:68, txt:'S9'};}
+  // +dB zone: map P10-P60 to 68-100%
+  const db = lerp(r, S_RAW.P10,S_RAW.P20,10,20,
+                      S_RAW.P20,S_RAW.P40,20,40,
+                      S_RAW.P40,S_RAW.P60,40,60);
+  const pct = 68 + (db-10)/50*32;
+  return {pct:Math.min(100,pct), txt:'+'+Math.round(db)+'dB'};
+}
+function lerp(x, x0,x1,y0,y1, x2,x3,y2,y3, x4,x5,y4,y5) {
+  if (x<=x1) return y0+(y1-y0)*(x-x0)/(x1-x0);
+  if (x<=x3) return y2+(y3-y2)*(x-x2)/(x3-x2);
+  return y4+(y5-y4)*(x-x4)/(x5-x4);
+}
+// PO: piecewise watts from raw (from Python project)
+function poFromRaw(x) {
+  const pts=[[55,.5],[73,1],[113,3],[139,5],[164,7.5],[189,10],[255,15]];
+  if (x<=0) return 0;
+  if (x<=pts[0][0]) return pts[0][1]*x/pts[0][0];
+  for (let i=0;i<pts.length-1;i++) {
+    const [x1,y1]=pts[i],[x2,y2]=pts[i+1];
+    if (x<=x2) return y1+(y2-y1)*(x-x1)/(x2-x1);
+  }
+  return pts[pts.length-1][1];
+}
+// SWR from raw
+function swrFromRaw(r) {
+  if (r>=255) return '∞';
+  if (r<=0)   return '1.0';
+  const v = 1.0 + 0.333*(Math.exp(0.0151*r)-1.0);
+  return v.toFixed(2);
+}
+// ALC: 0-200%
+function alcFromRaw(r) { return Math.min(200,(r*200/252)).toFixed(0)+'%'; }
+// COMP: 0-30dB
+function compFromRaw(r) { return (r*30/255).toFixed(1)+'dB'; }
+// IDD: 0-3A
+function iddFromRaw(r) { return (r*3/255).toFixed(2)+'A'; }
+// VDD: 0-13.8V
+function vddFromRaw(r) { return (r*13.8/203).toFixed(1)+'V'; }
+
+// ── Meters update ────────────────────────────────
 function setM(id,pct){ const el=document.getElementById(id); if(el) el.style.width=Math.min(100,Math.max(0,pct))+'%'; }
 
 // ── Main display update ──────────────────────────
@@ -917,25 +993,52 @@ function updateDisplay(){
   txind.className=state.tx?'on':'';
   document.getElementById('split-ind').textContent=state.split?'SPLIT':'';
   updateBandBtns(); updateModeBtns(); updateDSPBtns(); updatePreamp();
-  setM('sf',state.smeter/255*100);
-  setM('pof',state.po/255*100);
-  setM('alf',state.alc/255*100);
-  setM('swf',state.swr/255*100);
-  setM('idf',state.idd/255*100);
-  document.getElementById('pov').textContent=state.tx?Math.round(state.po/255*100)+'W':'0W';
-  document.getElementById('alv').textContent=state.tx?Math.round(state.alc/255*100)+'%':'—';
-  document.getElementById('swv').textContent=state.tx?(1+state.swr/255*3).toFixed(1)+':1':'—';
-  document.getElementById('idv').textContent=(state.idd/255*20).toFixed(1)+'A';
+  // S-meters (non-linear)
+  const sm = sFromRaw(state.smeter_main||0);
+  const ss = sFromRaw(state.smeter_sub||0);
+  setM('smf', sm.pct); document.getElementById('smv').textContent = sm.txt;
+  setM('ssf', ss.pct); document.getElementById('ssv').textContent = ss.txt;
+  // TX meters — show values always, they go to 0 when RX
+  const poW = poFromRaw(state.po||0);
+  setM('pof', (state.po||0)/255*100);
+  document.getElementById('pov').textContent = state.tx ? poW.toFixed(1)+'W' : '—';
+  const alcPct = state.alc||0;
+  setM('alf', alcPct/252*100);
+  document.getElementById('alv').textContent = state.tx ? alcFromRaw(alcPct) : '—';
+  const compR = state.comp||0;
+  setM('compf', compR/255*100);
+  document.getElementById('compv').textContent = state.tx ? compFromRaw(compR) : '—';
+  const swrR = state.swr||0;
+  setM('swf', Math.min(100, swrR/100*100));
+  document.getElementById('swv').textContent = state.tx ? swrFromRaw(swrR)+':1' : '—';
+  const iddR = state.idd||0;
+  setM('idf', iddR/255*100);
+  document.getElementById('idv').textContent = iddFromRaw(iddR);
+  const vddR = state.vdd||0;
+  setM('vddf', Math.min(100,vddR/203*100));
+  document.getElementById('vddv').textContent = vddFromRaw(vddR);
 }
 
 // ── Demo mode ────────────────────────────────────
-let demo=true, ds=40;
+let demo=true, ds=40, ds2=20;
 function demoTick(){
   if(!demo) return;
-  ds+=(Math.random()-.5)*18; ds=Math.max(5,Math.min(220,ds));
-  state.smeter=Math.round(ds);
-  if(state.tx){ state.po=Math.round(state.power/100*240+Math.random()*8);
-    state.alc=Math.round(180+Math.random()*30); state.swr=Math.round(20+Math.random()*10); }
+  ds  += (Math.random()-.5)*18; ds  = Math.max(5,Math.min(220,ds));
+  ds2 += (Math.random()-.5)*12; ds2 = Math.max(0,Math.min(160,ds2));
+  state.smeter_main = Math.round(ds);
+  state.smeter_sub  = Math.round(ds2);
+  if(state.tx){
+    state.po   = Math.round(200+Math.random()*40);
+    state.alc  = Math.round(180+Math.random()*30);
+    state.comp = Math.round(100+Math.random()*50);
+    state.swr  = Math.round(15+Math.random()*8);
+    state.idd  = Math.round(180+Math.random()*20);
+    state.vdd  = Math.round(195+Math.random()*8);
+  } else {
+    state.po=0; state.alc=0; state.comp=0; state.swr=0;
+    state.idd = Math.round(40+Math.random()*10);
+    state.vdd = Math.round(200+Math.random()*3);
+  }
   updateDisplay();
 }
 
