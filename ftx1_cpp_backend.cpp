@@ -229,17 +229,13 @@ namespace CAT {
         return "";
     }
 
-    // Band Select: BS + set a sensible default frequency for that band
-    struct BandInfo { std::string bsCode; long long defaultHz; };
-    static const std::map<std::string, BandInfo> bandMap;
+    // Band select: just set frequency directly — BS command unreliable on FTX-1
     std::string setBand(const std::string& band) {
         auto it = bandMap.find(band);
         if (it == bandMap.end()) return "";
-        // BS selects the band, then FA sets a default freq within it
-        std::string bs = "BS" + it->second.bsCode + ";";
         char fa[32];
         snprintf(fa, sizeof(fa), "FA%09lld;", it->second.defaultHz);
-        return bs + fa;   // send both as one string
+        return fa;  // FA only, no BS
     }
 
     // Filter: NA0/NA1 (narrow on/off); FW=filter width 0000-4000
@@ -512,11 +508,13 @@ private:
         state_.tx = (r.size() > 24 && r[24] == '1');
     }
 
-    // Parse meter response: RM[type][value 0-255];
+    // Parse meter response: RM[type][6-digit value];  e.g. RM1000000;
     void parseRM(const std::string& r) {
-        if (r.size() < 7) return;
+        if (r.size() < 9) return;
         int type = r[2] - '0';
-        int val  = std::stoi(r.substr(3,3));
+        int val  = std::stoi(r.substr(3, 6));   // 6 digits
+        // scale to 0-255 (raw value is 0-255 stored in 6 digits)
+        val = std::min(val, 255);
         switch(type) {
             case 1: state_.smeter = val; break;
             case 2: state_.po     = val; break;
