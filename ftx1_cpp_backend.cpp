@@ -12,6 +12,13 @@
  *   ftx1_server.exe --port COM4 --baud 38400 --http 8080 --auto
  */
 
+#include "httplib.h"   // must come FIRST — includes winsock2.h before windows.h
+#include "json.hpp"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>   // after httplib to avoid sockaddr redefinition
+
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -24,10 +31,6 @@
 #include <functional>
 #include <cstring>
 #include <algorithm>
-#include <windows.h>
-
-#include "httplib.h"
-#include "json.hpp"
 using json = nlohmann::json;
 
 // ── MSVC-safe clamp ───────────────────────────────────────────────────────────
