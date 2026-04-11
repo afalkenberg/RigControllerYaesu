@@ -31,6 +31,8 @@
 #include <functional>
 #include <cstring>
 #include <algorithm>
+#include "CATCommand.h"
+
 using json = nlohmann::json;
 
 // ── MSVC-safe clamp ───────────────────────────────────────────────────────────
@@ -120,136 +122,6 @@ static const std::map<std::string, BandInfo> g_bandMap {
     {"2m",   {144200000LL}},
     {"70cm", {432100000LL}}
 };
-
-// =============================================================================
-//  CAT Command Builder
-// =============================================================================
-namespace CAT {
-
-    std::string setFrequency(const std::string& vfo, long long hz) {
-        std::string cmd = (vfo == "SUB") ? "FB" : "FA";
-        char buf[16]; snprintf(buf, sizeof(buf), "%09lld", hz);
-        return cmd + buf + ";";
-    }
-    std::string getFrequency(const std::string& vfo) {
-        return (vfo == "SUB") ? "FB;" : "FA;";
-    }
-
-    // Mode map
-    static const std::map<std::string,std::string> modeMap {
-        {"LSB","0"},{"USB","1"},{"CW","2"},{"CWR","3"},
-        {"AM","4"},{"FM","5"},{"DATA-L","6"},{"DATA-U","7"},
-        {"DATA-FM","8"},{"C4FM","9"}
-    };
-    std::string setMode(const std::string& vfo, const std::string& mode) {
-        auto it = modeMap.find(mode);
-        std::string m   = (it != modeMap.end()) ? it->second : "1";
-        std::string sub = (vfo == "SUB") ? "1" : "0";
-        return "MD" + sub + m + ";";  // FTX-1: MD[vfo][mode]  e.g. MD01=MAIN USB
-    }
-    std::string getMode() { return "MD0;"; }
-
-    // PTT
-    std::string setPTT(bool tx) { return tx ? "TX1;" : "TX0;"; }
-
-    // Gains
-    std::string setAFGain(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"AG%d%03d;",sub?1:0,CLAMP(v,0,255));
-        return buf;
-    }
-    std::string getAFGain(bool sub=false) { return sub ? "AG1;" : "AG0;"; }
-    std::string setRFGain(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"RG%03d;",CLAMP(v,0,255));
-        return buf;
-    }
-    std::string setSquelch(int v, bool sub=false) {
-        char buf[16]; snprintf(buf,sizeof(buf),"SQ%d%03d;",sub?1:0,CLAMP(v,0,255));
-        return buf;
-    }
-    std::string setPower(int v) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PC%03d;",CLAMP(v,0,100));
-        return buf;
-    }
-
-    // VFO actions
-    std::string vfoAction(const std::string& action) {
-        if (action == "swap")          return "SV;";
-        if (action == "copy_main_sub") return "AM;";
-        if (action == "copy_sub_main") return "BA;";
-        if (action == "toggle_ab")     return "FT;";
-        return "";
-    }
-
-    // Band — use FA directly since BS is unreliable on FTX-1
-    std::string setBand(const std::string& band) {
-        auto it = g_bandMap.find(band);
-        if (it == g_bandMap.end()) return "";
-        char fa[32];
-        snprintf(fa, sizeof(fa), "FA%09lld;", it->second.defaultHz);
-        return fa;
-    }
-
-    // Filter
-    std::string setFilterWidth(int hz) {
-        char buf[16]; snprintf(buf,sizeof(buf),"FW%04d;",CLAMP(hz,0,4000));
-        return buf;
-    }
-
-    // DSP
-    std::string setNB(bool on)         { return on ? "NB1;" : "NB0;"; }
-    std::string setNR(bool on)         { return on ? "NR1;" : "NR0;"; }
-    std::string setAutoNotch(bool on)  { return on ? "BC1;" : "BC0;"; }
-    std::string setManualNotch(bool on, int freq=1000) {
-        if (!on) return "BP00000;";
-        char buf[16]; snprintf(buf,sizeof(buf),"BP1%04d;",CLAMP(freq,0,4000));
-        return buf;
-    }
-
-    // RF path
-    std::string setPreamp(int level) {
-        char buf[16]; snprintf(buf,sizeof(buf),"PA0%d;",CLAMP(level,0,2));
-        return buf;
-    }
-    std::string setATT(bool on)  { return on ? "RA01;" : "RA00;"; }
-    std::string setLock(bool on) { return on ? "LK1;"  : "LK0;";  }
-    std::string setSplit(bool on){ return on ? "SP1;"  : "SP0;";  }
-
-    // RIT / XIT
-    std::string setRIT(bool on) { return on ? "RT1;" : "RT0;"; }
-    std::string setRITOffset(int hz) {
-        std::string cmds = "RC;";
-        if (hz > 0) { char buf[16]; snprintf(buf,sizeof(buf),"RU%04d;", hz/10); cmds+=buf; }
-        else if (hz < 0) { char buf[16]; snprintf(buf,sizeof(buf),"RD%04d;",-hz/10); cmds+=buf; }
-        return cmds;
-    }
-    std::string setXIT(bool on) { return on ? "XT1;" : "XT0;"; }
-
-    // Tuner
-    std::string tuner(const std::string& action) {
-        if (action == "start") return "AC010;";
-        if (action == "stop")  return "AC000;";
-        return "";
-    }
-
-    // Meters — FTX-1 meter IDs:
-    // 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
-    // Response: RM[id][6-digit value]; e.g. RM1000128;
-    std::string readMeter(int type) {
-        char buf[8]; snprintf(buf,sizeof(buf),"RM%d;",type);
-        return buf;
-    }
-    // Poll all meters in one burst
-    std::string readAllMeters() {
-        return "RM1;RM2;RM3;RM4;RM5;RM6;RM7;RM8;";
-    }
-
-    // Auto-information
-    std::string setAI(bool on) { return on ? "AI2;" : "AI0;"; }
-
-    // Full status packet
-    std::string getIF() { return "IF;"; }
-
-} // namespace CAT
 
 // =============================================================================
 //  Rig State
