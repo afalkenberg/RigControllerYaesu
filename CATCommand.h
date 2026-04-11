@@ -1,1548 +1,503 @@
 /**
  * CATCommand.h
  * ============
- * Complete CAT command builder for the Yaesu FTX-1 series transceiver.
+ * CAT command builder for the Yaesu FTX-1 series transceiver.
+ * All methods are static — no instance needed.
  *
- * Covers the FTX-1 CAT Operation Reference Manual in page order:
- *   Pages 5-8  : Core commands (AB, AC, AG, AI, AM, AO, BA, BC, BD, BI,
- *                BM, BP, BS, BU, CF, CH, CN, CO, CS, CT, DA, DN, DT, EX,
- *                FA, FB, FN, FR, FT, GP, GT, ID, IF, IS, KM, KP, KR, KS,
- *                KY, LK, LM, MA, MB, MC, MD, MG, ML, MR, MS, NB, NR, PA,
- *                PC, PR, RA, RC, RD, RM, RT, RU, RG, SC, SD, SF, SH, SM,
- *                SP, SQ, SS, ST, SV, TS, TX, UP, VD, VE, VG, VM, VS, VX, ZI)
- *   Pages 9-27 : EX (Extended Menu) commands — all menu items named from
- *                the advance manual table titles.
- *
- * Usage:
- *   std::string cmd = CATCommand::setMainSideFrequency(14250000LL);
- *   serial.write(cmd);  // sends "FA014250000;"
- *
- * Every function returns a std::string containing the complete CAT command
- * including the semicolon terminator.  Read (get) functions return the
- * query string; the radio's answer must be parsed by the caller.
- *
- * Conventions:
- *   - VFO:   0 = MAIN, 1 = SUB
- *   - Mode:  0=LSB 1=USB 2=CW 3=CW-R 4=AM 5=FM 6=DATA-L 7=DATA-U
- *            8=DATA-FM 9=C4FM
- *   - bool parameters: true = ON/enable
- *   - Frequencies in Hz (long long)
- *   - Levels 0-255 unless otherwise noted
+ * See CATCommand.cpp for full implementation and parameter docs.
  */
 
 #pragma once
 #include <string>
-#include <cstdio>
-#include <algorithm>
+#include <cmath>
 
-// MSVC-safe clamp
+// MSVC-safe clamp (no dependency on std::clamp / <algorithm>)
 template<typename T>
-static inline T cat_clamp(T v, T lo, T hi){ return v<lo?lo:(v>hi?hi:v); }
+static inline T cat_clamp(T v, T lo, T hi) { return v<lo?lo:(v>hi?hi:v); }
 
 class CATCommand {
 public:
+
     // ====================================================================
-    // SECTION 1 — CORE COMMANDS (pages 5–8, alphabetical by 2-letter code)
+    //  SECTION 1 — CORE COMMANDS (pages 5–8)
     // ====================================================================
 
-    // ── AB: MAIN-side to SUB-side copy ──────────────────────────────────
-    static std::string setMainSideToSubSide() { return "AB;"; }
+    // AB — Main-side to Sub-side copy
+    static std::string setMainSideToSubSide();
 
-    // ── AC: ANTENNA TUNER CONTROL ───────────────────────────────────────
-    // p1: 0=off, 1=on(tune complete), 2=TX+tuning
-    static std::string setAntennaTunerControl(int p1) {
-        char b[8]; snprintf(b,sizeof(b),"AC0%d0;",cat_clamp(p1,0,2)); return b;
-    }
-    static std::string getAntennaTunerControl() { return "AC;"; }
+    // AC — Antenna Tuner Control  p1: 0=off 1=on 2=TX+tuning
+    static std::string setAntennaTunerControl(int p1);
+    static std::string getAntennaTunerControl();
 
-    // ── AG: AF GAIN ─────────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   level: 0-255
-    static std::string setAfGain(int vfo, int level) {
-        char b[12]; snprintf(b,sizeof(b),"AG%d%03d;",cat_clamp(vfo,0,1),cat_clamp(level,0,255)); return b;
-    }
-    static std::string getAfGain(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"AG%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // AG — AF Gain  vfo: 0=MAIN 1=SUB  level: 0-255
+    static std::string setAfGain(int vfo, int level);
+    static std::string getAfGain(int vfo = 0);
 
-    // ── AI: AUTO INFORMATION ────────────────────────────────────────────
-    // mode: 0=OFF, 1=AI1(Kenwood compat), 2=AI2(full AI)
-    static std::string setAutoInformation(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"AI%d;",cat_clamp(mode,0,2)); return b;
-    }
-    static std::string getAutoInformation() { return "AI;"; }
+    // AI — Auto Information  mode: 0=OFF 1=AI1 2=AI2(full)
+    static std::string setAutoInformation(int mode);
+    static std::string getAutoInformation();
 
-    // ── AM: MAIN-side to MEMORY CHANNEL copy ───────────────────────────
-    static std::string setMainSideToMemoryChannel() { return "AM;"; }
+    // AM — Main-side to Memory Channel copy
+    static std::string setMainSideToMemoryChannel();
 
-    // ── AO: AMC OUTPUT LEVEL ────────────────────────────────────────────
-    // level: 0-100
-    static std::string setAmcOutputLevel(int level) {
-        char b[8]; snprintf(b,sizeof(b),"AO%03d;",cat_clamp(level,0,100)); return b;
-    }
-    static std::string getAmcOutputLevel() { return "AO;"; }
+    // AO — AMC Output Level  level: 0-100
+    static std::string setAmcOutputLevel(int level);
+    static std::string getAmcOutputLevel();
 
-    // ── BA: SUB-side to MAIN-side copy ──────────────────────────────────
-    static std::string setSubSideToMainSide() { return "BA;"; }
+    // BA — Sub-side to Main-side copy
+    static std::string setSubSideToMainSide();
 
-    // ── BC: AUTO NOTCH (DNF) ─────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   on: true=ON
-    static std::string setAutoNotch(int vfo, bool on) {
-        char b[8]; snprintf(b,sizeof(b),"BC%d%d;",cat_clamp(vfo,0,1),on?1:0); return b;
-    }
-    static std::string getAutoNotch(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"BC%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // BC — Auto Notch (DNF)  vfo: 0=MAIN 1=SUB
+    static std::string setAutoNotch(int vfo, bool on);
+    static std::string getAutoNotch(int vfo = 0);
 
-    // ── BD: BAND DOWN ───────────────────────────────────────────────────
-    static std::string setBandDown() { return "BD0;"; }
+    // BD — Band Down
+    static std::string setBandDown();
 
-    // ── BI: BREAK-IN ────────────────────────────────────────────────────
-    // mode: 0=OFF, 1=SEMI, 2=FULL
-    static std::string setBreakIn(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"BI%d;",cat_clamp(mode,0,2)); return b;
-    }
-    static std::string getBreakIn() { return "BI;"; }
+    // BI — Break-In  mode: 0=OFF 1=SEMI 2=FULL
+    static std::string setBreakIn(int mode);
+    static std::string getBreakIn();
 
-    // ── BM: SUB-side to MEMORY CHANNEL copy ────────────────────────────
-    static std::string setSubSideToMemoryChannel() { return "BM;"; }
+    // BM — Sub-side to Memory Channel copy
+    static std::string setSubSideToMemoryChannel();
 
-    // ── BP: MANUAL NOTCH ────────────────────────────────────────────────
-    // on: false=OFF  freq: 0-4000 Hz (only used when on=true)
-    static std::string setManualNotch(bool on, int freqHz=1000) {
-        if (!on) return "BP00000;";
-        char b[12]; snprintf(b,sizeof(b),"BP1%04d;",cat_clamp(freqHz,0,4000)); return b;
-    }
-    static std::string getManualNotch() { return "BP;"; }
+    // BP — Manual Notch  freq: 0-4000 Hz
+    static std::string setManualNotch(bool on, int freqHz = 1000);
+    static std::string getManualNotch();
 
-    // ── BS: BAND SELECT ─────────────────────────────────────────────────
-    // band: 0=160m 1=80m 2=60m 3=40m 4=30m 5=20m 6=17m 7=15m 8=12m
-    //       9=10m 10=6m 11=2m 12=70cm
-    static std::string setBandSelect(int band) {
-        char b[8]; snprintf(b,sizeof(b),"BS%02d;",cat_clamp(band,0,12)); return b;
-    }
+    // BS — Band Select  band: 0=160m .. 12=70cm
+    static std::string setBandSelect(int band);
 
-    // ── BU: BAND UP ─────────────────────────────────────────────────────
-    static std::string setBandUp() { return "BU0;"; }
+    // BU — Band Up
+    static std::string setBandUp();
 
-    // ── CF: CLAR (CLARIFIER) ────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   on: true=ON   offsetHz: -9999..+9999
-    static std::string setClarifier(int vfo, bool on, int offsetHz=0) {
-        char sign = offsetHz>=0?'+':'-';
-        char b[16]; snprintf(b,sizeof(b),"CF%d%d%c%04d;",
-            cat_clamp(vfo,0,1),on?1:0,sign,std::abs(offsetHz)%10000);
-        return b;
-    }
-    static std::string getClarifier(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"CF%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // CF — Clarifier  vfo: 0=MAIN 1=SUB  offsetHz: -9999..+9999
+    static std::string setClarifier(int vfo, bool on, int offsetHz = 0);
+    static std::string getClarifier(int vfo = 0);
 
-    // ── CH: CHANNEL UP/DOWN ─────────────────────────────────────────────
-    // dir: 0=DOWN, 1=UP
-    static std::string setChannelUpDown(int dir) {
-        char b[6]; snprintf(b,sizeof(b),"CH%d;",cat_clamp(dir,0,1)); return b;
-    }
+    // CH — Channel Up/Down  dir: 0=DOWN 1=UP
+    static std::string setChannelUpDown(int dir);
 
-    // ── CN: CTCSS NUMBER ────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   toneNum: 0=67.0Hz .. 49=254.1Hz (CTCSS table)
-    static std::string setCtcssNumber(int vfo, int toneNum) {
-        char b[10]; snprintf(b,sizeof(b),"CN%d%02d;",cat_clamp(vfo,0,1),cat_clamp(toneNum,0,49)); return b;
-    }
-    static std::string getCtcssNumber(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"CN%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // CN — CTCSS Number  toneNum: 0-49
+    static std::string setCtcssNumber(int vfo, int toneNum);
+    static std::string getCtcssNumber(int vfo = 0);
 
-    // ── CO: CONTOUR / APF ───────────────────────────────────────────────
-    // level: -40..+20 dB   width: 01-11 (Q factor index)
-    static std::string setContour(int levelDb, int width=5) {
-        levelDb = cat_clamp(levelDb,-40,20);
-        width   = cat_clamp(width,1,11);
-        char sign = levelDb>=0?'+':'-';
-        char b[12]; snprintf(b,sizeof(b),"CO%c%02d%02d;",sign,std::abs(levelDb),width); return b;
-    }
-    static std::string getContour() { return "CO;"; }
+    // CO — Contour/APF  levelDb: -40..+20  width: 1-11
+    static std::string setContour(int levelDb, int width = 5);
+    static std::string getContour();
 
-    // ── CS: CW SPOT ─────────────────────────────────────────────────────
-    static std::string setCwSpot(bool on) { return on ? "CS1;" : "CS0;"; }
-    static std::string getCwSpot()        { return "CS;"; }
+    // CS — CW Spot
+    static std::string setCwSpot(bool on);
+    static std::string getCwSpot();
 
-    // ── CT: CTCSS ───────────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   mode: 0=OFF 1=ENC 2=ENC+DEC
-    static std::string setCtcss(int vfo, int mode) {
-        char b[8]; snprintf(b,sizeof(b),"CT%d%d;",cat_clamp(vfo,0,1),cat_clamp(mode,0,2)); return b;
-    }
-    static std::string getCtcss(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"CT%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // CT — CTCSS  mode: 0=OFF 1=ENC 2=ENC+DEC
+    static std::string setCtcss(int vfo, int mode);
+    static std::string getCtcss(int vfo = 0);
 
-    // ── DA: LCD CONTRAST / DIMMER ───────────────────────────────────────
-    // type: 0=contrast, 1=dimmer   level: 0-100
-    static std::string setLcdDimmer(int type, int level) {
-        char b[10]; snprintf(b,sizeof(b),"DA%d%03d;",cat_clamp(type,0,1),cat_clamp(level,0,100)); return b;
-    }
-    static std::string getLcdDimmer(int type=1) {
-        char b[6]; snprintf(b,sizeof(b),"DA%d;",cat_clamp(type,0,1)); return b;
-    }
+    // DA — LCD Contrast/Dimmer  type: 0=contrast 1=dimmer  level: 0-100
+    static std::string setLcdDimmer(int type, int level);
+    static std::string getLcdDimmer(int type = 1);
 
-    // ── DN: DOWN KEY ────────────────────────────────────────────────────
-    static std::string setDownKey() { return "DN;"; }
+    // DN — Down Key
+    static std::string setDownKey();
 
-    // ── DT: DATE AND TIME ───────────────────────────────────────────────
-    // YYYYMMDDHHmmSS (14 digits)
-    static std::string setDateTime(const std::string& dt14) {
-        return "DT" + dt14.substr(0,14) + ";";
-    }
-    static std::string getDateTime() { return "DT;"; }
+    // DT — Date and Time  dt14: YYYYMMDDHHmmSS
+    static std::string setDateTime(const std::string& dt14);
+    static std::string getDateTime();
 
-    // ── EX: MENU (extended) — see Section 2 below ───────────────────────
-    // Raw EX command builder used by named wrappers
-    static std::string setMenuRaw(int menuNum, const std::string& value) {
-        char b[16]; snprintf(b,sizeof(b),"EX%04d",menuNum);
-        return std::string(b) + value + ";";
-    }
-    static std::string getMenuRaw(int menuNum) {
-        char b[12]; snprintf(b,sizeof(b),"EX%04d;",menuNum); return b;
-    }
+    // EX — Menu (raw builder used by named wrappers)
+    static std::string setMenuRaw(int menuNum, const std::string& value);
+    static std::string getMenuRaw(int menuNum);
 
-    // ── FA: FREQUENCY MAIN-side ─────────────────────────────────────────
-    // freqHz: 1800000 .. 470000000
-    static std::string setMainSideFrequency(long long freqHz) {
-        char b[16]; snprintf(b,sizeof(b),"FA%09lld;",freqHz); return b;
-    }
-    static std::string getMainSideFrequency() { return "FA;"; }
+    // FA — Frequency Main-side  freqHz: 1800000..470000000
+    static std::string setMainSideFrequency(long long freqHz);
+    static std::string getMainSideFrequency();
 
-    // ── FB: FREQUENCY SUB-side ──────────────────────────────────────────
-    static std::string setSubSideFrequency(long long freqHz) {
-        char b[16]; snprintf(b,sizeof(b),"FB%09lld;",freqHz); return b;
-    }
-    static std::string getSubSideFrequency() { return "FB;"; }
+    // FB — Frequency Sub-side
+    static std::string setSubSideFrequency(long long freqHz);
+    static std::string getSubSideFrequency();
 
-    // ── FN: FINE TUNING ─────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    static std::string setFineTuning(int vfo, bool on) {
-        char b[8]; snprintf(b,sizeof(b),"FN%d%d;",cat_clamp(vfo,0,1),on?1:0); return b;
-    }
-    static std::string getFineTuning(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"FN%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // FN — Fine Tuning  vfo: 0=MAIN 1=SUB
+    static std::string setFineTuning(int vfo, bool on);
+    static std::string getFineTuning(int vfo = 0);
 
-    // ── FR: FUNCTION RX (single/dual receive) ───────────────────────────
-    // mode: 0=single, 1=dual
-    static std::string setFunctionRx(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"FR%d;",cat_clamp(mode,0,1)); return b;
-    }
-    static std::string getFunctionRx() { return "FR;"; }
+    // FR — Function RX  mode: 0=single 1=dual
+    static std::string setFunctionRx(int mode);
+    static std::string getFunctionRx();
 
-    // ── FT: FUNCTION TX (transmit VFO) ──────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    static std::string setFunctionTx(int vfo) {
-        char b[6]; snprintf(b,sizeof(b),"FT%d;",cat_clamp(vfo,0,1)); return b;
-    }
-    static std::string getFunctionTx() { return "FT;"; }
+    // FT — Function TX  vfo: 0=MAIN 1=SUB
+    static std::string setFunctionTx(int vfo);
+    static std::string getFunctionTx();
 
-    // ── GP: GP OUT A/B/C/D ──────────────────────────────────────────────
-    // port: 0=A,1=B,2=C,3=D   level: 0=LOW, 1=HIGH
-    static std::string setGpOut(int port, int level) {
-        char b[8]; snprintf(b,sizeof(b),"GP%d%d;",cat_clamp(port,0,3),cat_clamp(level,0,1)); return b;
-    }
-    static std::string getGpOut(int port=0) {
-        char b[6]; snprintf(b,sizeof(b),"GP%d;",cat_clamp(port,0,3)); return b;
-    }
+    // GP — GP Out  port: 0-3  level: 0=LOW 1=HIGH
+    static std::string setGpOut(int port, int level);
+    static std::string getGpOut(int port = 0);
 
-    // ── GT: AGC FUNCTION ────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   mode: 0=OFF 1=FAST 2=MID 3=SLOW 4=AUTO
-    static std::string setAgcFunction(int vfo, int mode) {
-        char b[10]; snprintf(b,sizeof(b),"GT0%d%d;",cat_clamp(vfo,0,1),cat_clamp(mode,0,4)); return b;
-    }
-    static std::string getAgcFunction(int vfo=0) {
-        char b[8]; snprintf(b,sizeof(b),"GT0%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // GT — AGC Function  vfo: 0=MAIN 1=SUB  mode: 0=OFF 1=FAST 2=MID 3=SLOW 4=AUTO
+    static std::string setAgcFunction(int vfo, int mode);
+    static std::string getAgcFunction(int vfo = 0);
 
-    // ── ID: RADIO ID ────────────────────────────────────────────────────
-    static std::string getRadioId() { return "ID;"; }
+    // ID — Radio ID
+    static std::string getRadioId();
 
-    // ── IF: INFORMATION (MAIN-side) ─────────────────────────────────────
-    static std::string getInformation() { return "IF;"; }
+    // IF — Information (Main-side)
+    static std::string getInformation();
 
-    // ── IS: IF SHIFT ────────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   offsetHz: -1000..+1000
-    static std::string setIfShift(int vfo, int offsetHz) {
-        offsetHz = cat_clamp(offsetHz,-1000,1000);
-        char sign = offsetHz>=0?'+':'-';
-        char b[14]; snprintf(b,sizeof(b),"IS%d%c%04d;",cat_clamp(vfo,0,1),sign,std::abs(offsetHz));
-        return b;
-    }
-    static std::string getIfShift(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"IS%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // IS — IF Shift  vfo: 0=MAIN 1=SUB  offsetHz: -1000..+1000
+    static std::string setIfShift(int vfo, int offsetHz);
+    static std::string getIfShift(int vfo = 0);
 
-    // ── KM: KEYER MEMORY ────────────────────────────────────────────────
-    // ch: 1-5   text: CW message text (A-Z 0-9 space / = + ? @ etc.)
-    static std::string setKeyerMemory(int ch, const std::string& text) {
-        char b[8]; snprintf(b,sizeof(b),"KM%d",cat_clamp(ch,1,5));
-        return std::string(b) + text + ";";
-    }
-    static std::string getKeyerMemory(int ch) {
-        char b[6]; snprintf(b,sizeof(b),"KM%d;",cat_clamp(ch,1,5)); return b;
-    }
+    // KM — Keyer Memory  ch: 1-5
+    static std::string setKeyerMemory(int ch, const std::string& text);
+    static std::string getKeyerMemory(int ch);
 
-    // ── KP: KEY PITCH ───────────────────────────────────────────────────
-    // pitch: 300-1050 Hz (10 Hz steps)
-    static std::string setKeyPitch(int pitchHz) {
-        pitchHz = cat_clamp(pitchHz,300,1050);
-        char b[10]; snprintf(b,sizeof(b),"KP%04d;",pitchHz); return b;
-    }
-    static std::string getKeyPitch() { return "KP;"; }
+    // KP — Key Pitch  pitchHz: 300-1050
+    static std::string setKeyPitch(int pitchHz);
+    static std::string getKeyPitch();
 
-    // ── KR: KEYER ───────────────────────────────────────────────────────
-    // mode: 0=OFF 1=MODE-A 2=MODE-B
-    static std::string setKeyer(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"KR%d;",cat_clamp(mode,0,2)); return b;
-    }
-    static std::string getKeyer() { return "KR;"; }
+    // KR — Keyer  mode: 0=OFF 1=MODE-A 2=MODE-B
+    static std::string setKeyer(int mode);
+    static std::string getKeyer();
 
-    // ── KS: KEY SPEED ───────────────────────────────────────────────────
-    // wpm: 4-60
-    static std::string setKeySpeed(int wpm) {
-        char b[8]; snprintf(b,sizeof(b),"KS%03d;",cat_clamp(wpm,4,60)); return b;
-    }
-    static std::string getKeySpeed() { return "KS;"; }
+    // KS — Key Speed  wpm: 4-60
+    static std::string setKeySpeed(int wpm);
+    static std::string getKeySpeed();
 
-    // ── KY: CW KEYING MEMORY PLAY ───────────────────────────────────────
-    // ch: 0=stop, 1-5=play channel, or direct text send
-    static std::string setCwKeyingMemoryPlay(int ch) {
-        char b[6]; snprintf(b,sizeof(b),"KY%d;",cat_clamp(ch,0,5)); return b;
-    }
-    // Send text directly as CW
-    static std::string setCwKeyingText(const std::string& text) {
-        return "KY " + text + ";";
-    }
+    // KY — CW Keying Memory Play  ch: 0=stop 1-5=play
+    static std::string setCwKeyingMemoryPlay(int ch);
+    static std::string setCwKeyingText(const std::string& text);
 
-    // ── LK: LOCK ────────────────────────────────────────────────────────
-    // type: 0=MAIN lock, 1=MAIN+SUB lock
-    static std::string setLock(bool on, int type=0) {
-        char b[8]; snprintf(b,sizeof(b),"LK%d%d;",on?1:0,cat_clamp(type,0,1)); return b;
-    }
-    static std::string getLock() { return "LK;"; }
+    // LK — Lock  type: 0=MAIN 1=MAIN+SUB
+    static std::string setLock(bool on, int type = 0);
+    static std::string getLock();
 
-    // ── LM: LOAD MESSAGE (voice/received sound recording) ───────────────
-    // type: 0=RX, 1=TX   ch: 1-5
-    static std::string setLoadMessage(int type, int ch) {
-        char b[8]; snprintf(b,sizeof(b),"LM%d%d;",cat_clamp(type,0,1),cat_clamp(ch,1,5)); return b;
-    }
+    // LM — Load Message  type: 0=RX 1=TX  ch: 1-5
+    static std::string setLoadMessage(int type, int ch);
 
-    // ── MA: MEMORY CHANNEL to MAIN-side transfer ────────────────────────
-    static std::string setMemoryChannelToMainSide() { return "MA;"; }
+    // MA — Memory Channel to Main-side
+    static std::string setMemoryChannelToMainSide();
 
-    // ── MB: MEMORY CHANNEL to SUB-side transfer ─────────────────────────
-    static std::string setMemoryChannelToSubSide() { return "MB;"; }
+    // MB — Memory Channel to Sub-side
+    static std::string setMemoryChannelToSubSide();
 
-    // ── MC: MEMORY CHANNEL ──────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   ch: 0-117
-    static std::string setMemoryChannel(int vfo, int ch) {
-        char b[10]; snprintf(b,sizeof(b),"MC%d%03d;",cat_clamp(vfo,0,1),cat_clamp(ch,0,117)); return b;
-    }
-    static std::string getMemoryChannel(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"MC%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // MC — Memory Channel  vfo: 0=MAIN 1=SUB  ch: 0-117
+    static std::string setMemoryChannel(int vfo, int ch);
+    static std::string getMemoryChannel(int vfo = 0);
 
-    // ── MD: OPERATING MODE ──────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
+    // MD — Operating Mode  vfo: 0=MAIN 1=SUB
     // mode: 0=LSB 1=USB 2=CW 3=CW-R 4=AM 5=FM 6=DATA-L 7=DATA-U 8=DATA-FM 9=C4FM
-    static std::string setOperatingMode(int vfo, int mode) {
-        char b[8]; snprintf(b,sizeof(b),"MD%d%d;",cat_clamp(vfo,0,1),cat_clamp(mode,0,9)); return b;
-    }
-    static std::string getOperatingMode(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"MD%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    static std::string setOperatingMode(int vfo, int mode);
+    static std::string getOperatingMode(int vfo = 0);
 
-    // ── MG: MIC GAIN ────────────────────────────────────────────────────
-    // level: 0-100
-    static std::string setMicGain(int level) {
-        char b[8]; snprintf(b,sizeof(b),"MG%03d;",cat_clamp(level,0,100)); return b;
-    }
-    static std::string getMicGain() { return "MG;"; }
+    // MG — Mic Gain  level: 0-100
+    static std::string setMicGain(int level);
+    static std::string getMicGain();
 
-    // ── ML: MONITOR LEVEL ───────────────────────────────────────────────
-    // level: 0-100
-    static std::string setMonitorLevel(int level) {
-        char b[8]; snprintf(b,sizeof(b),"ML%03d;",cat_clamp(level,0,100)); return b;
-    }
-    static std::string getMonitorLevel() { return "ML;"; }
+    // ML — Monitor Level  level: 0-100
+    static std::string setMonitorLevel(int level);
+    static std::string getMonitorLevel();
 
-    // ── MR: MEMORY CHANNEL READ ─────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   ch: 0-117
-    static std::string getMemoryChannelRead(int vfo, int ch) {
-        char b[10]; snprintf(b,sizeof(b),"MR%d%03d;",cat_clamp(vfo,0,1),cat_clamp(ch,0,117)); return b;
-    }
+    // MR — Memory Channel Read  vfo: 0=MAIN 1=SUB  ch: 0-117
+    static std::string getMemoryChannelRead(int vfo, int ch);
 
-    // ── MS: METER SW ────────────────────────────────────────────────────
-    // meter: 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
-    static std::string setMeterSw(int meter) {
-        char b[6]; snprintf(b,sizeof(b),"MS%d;",cat_clamp(meter,1,8)); return b;
-    }
-    static std::string getMeterSw() { return "MS;"; }
+    // MS — Meter SW  meter: 1-8
+    static std::string setMeterSw(int meter);
+    static std::string getMeterSw();
 
-    // ── NB: NOISE BLANKER ───────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    static std::string setNoiseBlanker(int vfo, bool on) {
-        char b[8]; snprintf(b,sizeof(b),"NB%d%d;",cat_clamp(vfo,0,1),on?1:0); return b;
-    }
-    static std::string getNoiseBlanker(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"NB%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // NB — Noise Blanker  vfo: 0=MAIN 1=SUB
+    static std::string setNoiseBlanker(int vfo, bool on);
+    static std::string getNoiseBlanker(int vfo = 0);
 
-    // ── NR: NOISE REDUCTION (DNR) ───────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    static std::string setNoiseReduction(int vfo, bool on) {
-        char b[8]; snprintf(b,sizeof(b),"NR%d%d;",cat_clamp(vfo,0,1),on?1:0); return b;
-    }
-    static std::string getNoiseReduction(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"NR%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // NR — Noise Reduction  vfo: 0=MAIN 1=SUB
+    static std::string setNoiseReduction(int vfo, bool on);
+    static std::string getNoiseReduction(int vfo = 0);
 
-    // ── PA: PREAMP / IPO ────────────────────────────────────────────────
-    // band: 0=HF/50MHz, 1=VHF, 2=UHF
-    // level: 0=IPO(OFF) 1=AMP1 2=AMP2 (HF/50); 0=OFF 1=ON (VHF/UHF)
-    static std::string setPreamp(int band, int level) {
-        char b[8]; snprintf(b,sizeof(b),"PA%d%d;",cat_clamp(band,0,2),cat_clamp(level,0,2)); return b;
-    }
-    static std::string getPreamp(int band=0) {
-        char b[6]; snprintf(b,sizeof(b),"PA%d;",cat_clamp(band,0,2)); return b;
-    }
+    // PA — Preamp/IPO  band: 0=HF/50 1=VHF 2=UHF  level: 0=IPO 1=AMP1 2=AMP2
+    static std::string setPreamp(int band, int level);
+    static std::string getPreamp(int band = 0);
 
-    // ── PC: POWER CONTROL ───────────────────────────────────────────────
-    // watts: 0-100
-    static std::string setPowerControl(int watts) {
-        char b[8]; snprintf(b,sizeof(b),"PC%03d;",cat_clamp(watts,0,100)); return b;
-    }
-    static std::string getPowerControl() { return "PC;"; }
+    // PC — Power Control  watts: 0-100
+    static std::string setPowerControl(int watts);
+    static std::string getPowerControl();
 
-    // ── PR: SPEECH PROCESSOR ────────────────────────────────────────────
-    static std::string setSpeechProcessor(bool on) { return on ? "PR1;" : "PR0;"; }
-    static std::string getSpeechProcessor()        { return "PR;"; }
+    // PR — Speech Processor
+    static std::string setSpeechProcessor(bool on);
+    static std::string getSpeechProcessor();
 
-    // ── RA: ATTENUATOR ──────────────────────────────────────────────────
-    // on: true=ATT ON   level: 0=6dB, 1=12dB, 2=18dB (or 0=off when on=false)
-    static std::string setAttenuator(bool on, int level=0) {
-        if (!on) return "RA00;";
-        char b[8]; snprintf(b,sizeof(b),"RA%02d;",cat_clamp(level+1,1,3)); return b;
-    }
-    static std::string getAttenuator() { return "RA;"; }
+    // RA — Attenuator  level: 0=6dB 1=12dB 2=18dB (ignored when on=false)
+    static std::string setAttenuator(bool on, int level = 0);
+    static std::string getAttenuator();
 
-    // ── RC: CLAR/RIT CLEAR ──────────────────────────────────────────────
-    static std::string setClarClear() { return "RC;"; }
-    static std::string clearRitXit() { return "RC;"; }
+    // RC — RIT/XIT Clear
+    static std::string setClarClear();
+    static std::string clearRitXit();
 
-    // ── RD: RIT/XIT DOWN ────────────────────────────────────────────────
-    // steps: number of 10-Hz steps down
-    static std::string setRitDown(int steps=1) {
-        char b[8]; snprintf(b,sizeof(b),"RD%04d;",cat_clamp(steps,0,9999)); return b;
-    }
+    // RD — RIT/XIT Down  steps: 10-Hz steps
+    static std::string setRitDown(int steps = 1);
 
-    // ── RM: READ METER ──────────────────────────────────────────────────
-    // meter: 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
-    // Response: RM[meter][6-digit raw value 000000-000255];
-    static std::string getReadMeter(int meter) {
-        char b[6]; snprintf(b,sizeof(b),"RM%d;",cat_clamp(meter,1,8)); return b;
-    }
-    // Convenience helpers
-    static std::string getSmeterMain()  { return "RM1;"; }
-    static std::string getSmeterSub()   { return "RM2;"; }
-    static std::string getComp()        { return "RM3;"; }
-    static std::string getAlc()         { return "RM4;"; }
-    static std::string getPowerOutput() { return "RM5;"; }
-    static std::string getSwr()         { return "RM6;"; }
-    static std::string getIdd()         { return "RM7;"; }
-    static std::string getVdd()         { return "RM8;"; }
+    // RM — Read Meter  meter: 1=S-MAIN 2=S-SUB 3=COMP 4=ALC 5=PO 6=SWR 7=IDD 8=VDD
+    static std::string getReadMeter(int meter);
+    static std::string getSmeterMain();
+    static std::string getSmeterSub();
+    static std::string getComp();
+    static std::string getAlc();
+    static std::string getPowerOutput();
+    static std::string getSwr();
+    static std::string getIdd();
+    static std::string getVdd();
 
-    // ── RT: RIT ─────────────────────────────────────────────────────────
-    static std::string setRit(bool on) { return on ? "RT1;" : "RT0;"; }
-    static std::string getRit()        { return "RT;"; }
+    // RT — RIT
+    static std::string setRit(bool on);
+    static std::string getRit();
 
-    // ── RU: RIT/XIT UP ──────────────────────────────────────────────────
-    // steps: number of 10-Hz steps up
-    static std::string setRitUp(int steps=1) {
-        char b[8]; snprintf(b,sizeof(b),"RU%04d;",cat_clamp(steps,0,9999)); return b;
-    }
+    // RU — RIT/XIT Up  steps: 10-Hz steps
+    static std::string setRitUp(int steps = 1);
 
-    // ── RG: RF GAIN ─────────────────────────────────────────────────────
-    // level: 0-255
-    static std::string setRfGain(int level) {
-        char b[8]; snprintf(b,sizeof(b),"RG%03d;",cat_clamp(level,0,255)); return b;
-    }
-    static std::string getRfGain() { return "RG;"; }
+    // RG — RF Gain  level: 0-255
+    static std::string setRfGain(int level);
+    static std::string getRfGain();
 
-    // ── SC: SCAN ────────────────────────────────────────────────────────
-    // mode: 0=stop 1=UP 2=DOWN 3=MEM 4=MODE 5=GRP
-    static std::string setScan(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"SC%d;",cat_clamp(mode,0,5)); return b;
-    }
-    static std::string getScan() { return "SC;"; }
+    // SC — Scan  mode: 0=stop 1=UP 2=DOWN 3=MEM 4=MODE 5=GRP
+    static std::string setScan(int mode);
+    static std::string getScan();
 
-    // ── SD: CW BREAK-IN DELAY TIME ──────────────────────────────────────
-    // ms: 30-3000 (10ms steps)
-    static std::string setCwBreakInDelay(int ms) {
-        char b[8]; snprintf(b,sizeof(b),"SD%04d;",cat_clamp(ms,30,3000)); return b;
-    }
-    static std::string getCwBreakInDelay() { return "SD;"; }
+    // SD — CW Break-In Delay  ms: 30-3000
+    static std::string setCwBreakInDelay(int ms);
+    static std::string getCwBreakInDelay();
 
-    // ── SF: FUNC-KNOB FUNCTION ──────────────────────────────────────────
-    // func: 0=MULTI 1=AF 2=RF/SQL etc. (radio-dependent)
-    static std::string setFuncKnobFunction(int func) {
-        char b[6]; snprintf(b,sizeof(b),"SF%d;",cat_clamp(func,0,9)); return b;
-    }
-    static std::string getFuncKnobFunction() { return "SF;"; }
+    // SF — Func-Knob Function
+    static std::string setFuncKnobFunction(int func);
+    static std::string getFuncKnobFunction();
 
-    // ── SH: WIDTH ───────────────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    // widthIdx: 0-99  (0=narrowest, maps to 50Hz steps from 50Hz upward)
-    static std::string setWidth(int vfo, int widthIdx) {
-        char b[10]; snprintf(b,sizeof(b),"SH%d%02d;",cat_clamp(vfo,0,1),cat_clamp(widthIdx,0,99)); return b;
-    }
-    static std::string getWidth(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"SH%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // SH — Width  vfo: 0=MAIN 1=SUB  widthIdx: 0-99
+    static std::string setWidth(int vfo, int widthIdx);
+    static std::string getWidth(int vfo = 0);
 
-    // ── SM: S-METER READING ─────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB
-    // Response: SM[vfo][4-digit 0-0030];  (0=S0 .. 15=S9 .. 30=+60dB approx)
-    static std::string getSmeterReading(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"SM%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // SM — S-Meter Reading  vfo: 0=MAIN 1=SUB
+    static std::string getSmeterReading(int vfo = 0);
 
-    // ── SP: SPLIT ───────────────────────────────────────────────────────
-    static std::string setSplit(bool on) { return on ? "SP1;" : "SP0;"; }
-    static std::string getSplit()        { return "SP;"; }
+    // SP — Split
+    static std::string setSplit(bool on);
+    static std::string getSplit();
 
-    // ── SQ: SQUELCH LEVEL ───────────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   level: 0-255
-    static std::string setSquelchLevel(int vfo, int level) {
-        char b[10]; snprintf(b,sizeof(b),"SQ%d%03d;",cat_clamp(vfo,0,1),cat_clamp(level,0,255)); return b;
-    }
-    static std::string getSquelchLevel(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"SQ%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // SQ — Squelch Level  vfo: 0=MAIN 1=SUB  level: 0-255
+    static std::string setSquelchLevel(int vfo, int level);
+    static std::string getSquelchLevel(int vfo = 0);
 
-    // ── SS: SPECTRUM SCOPE ──────────────────────────────────────────────
-    // mode: 0=OFF 1=CENTER 2=FIXED 3=SCROLL-C 4=SCROLL-F
-    static std::string setSpectrumScope(int mode) {
-        char b[6]; snprintf(b,sizeof(b),"SS%d;",cat_clamp(mode,0,4)); return b;
-    }
-    static std::string getSpectrumScope() { return "SS;"; }
+    // SS — Spectrum Scope  mode: 0=OFF 1=CENTER 2=FIXED 3=SCROLL-C 4=SCROLL-F
+    static std::string setSpectrumScope(int mode);
+    static std::string getSpectrumScope();
 
-    // ── ST: SPLIT ───────────────────────────────────────────────────────
-    // (alias of SP on some Yaesu models; on FTX-1 same as SP)
-    static std::string setSplitSt(bool on) { return on ? "ST1;" : "ST0;"; }
-    static std::string getSplitSt()        { return "ST;"; }
+    // ST — Split (alias)
+    static std::string setSplitSt(bool on);
+    static std::string getSplitSt();
 
-    // ── SV: SWAP VFO ────────────────────────────────────────────────────
-    static std::string setSwapVfo() { return "SV;"; }
+    // SV — Swap VFO
+    static std::string setSwapVfo();
 
-    // ── TS: TXW ─────────────────────────────────────────────────────────
-    // Transmit Watch — listen on TX frequency during split
-    static std::string setTxw(bool on) { return on ? "TS1;" : "TS0;"; }
-    static std::string getTxw()        { return "TS;"; }
+    // TS — TXW
+    static std::string setTxw(bool on);
+    static std::string getTxw();
 
-    // ── TX: TX SET ──────────────────────────────────────────────────────
-    // mode: 0=RX, 1=TX (CAT-1), 2=TX (CAT-2)
-    static std::string setTx(int mode=1) {
-        char b[6]; snprintf(b,sizeof(b),"TX%d;",cat_clamp(mode,0,2)); return b;
-    }
-    static std::string setRx() { return "TX0;"; }
-    static std::string getTx() { return "TX;"; }
+    // TX — TX Set  mode: 0=RX 1=TX(CAT-1) 2=TX(CAT-2)
+    static std::string setTx(int mode = 1);
+    static std::string setRx();
+    static std::string getTx();
 
-    // ── UP: MIC UP ──────────────────────────────────────────────────────
-    static std::string setMicUp() { return "UP;"; }
+    // UP — Mic Up
+    static std::string setMicUp();
 
-    // ── VD: VOX DELAY TIME / DATA DELAY TIME ────────────────────────────
-    // delayCode: 0-30  (maps to: 50,100,150,...,3000ms)
-    static std::string setVoxDelayTime(int delayCode) {
-        char b[8]; snprintf(b,sizeof(b),"VD%04d;",cat_clamp(delayCode,0,30)); return b;
-    }
-    static std::string getVoxDelayTime() { return "VD;"; }
+    // VD — VOX Delay  delayCode: 0-30
+    static std::string setVoxDelayTime(int delayCode);
+    static std::string getVoxDelayTime();
 
-    // ── VE: FIRMWARE VERSION READ ────────────────────────────────────────
-    static std::string getFirmwareVersion() { return "VE;"; }
+    // VE — Firmware Version
+    static std::string getFirmwareVersion();
 
-    // ── VG: VOX GAIN ────────────────────────────────────────────────────
-    // gain: 0-100
-    static std::string setVoxGain(int gain) {
-        char b[8]; snprintf(b,sizeof(b),"VG%03d;",cat_clamp(gain,0,100)); return b;
-    }
-    static std::string getVoxGain() { return "VG;"; }
+    // VG — VOX Gain  gain: 0-100
+    static std::string setVoxGain(int gain);
+    static std::string getVoxGain();
 
-    // ── VM: VFO / MEMORY CHANNEL ────────────────────────────────────────
-    // vfo: 0=MAIN, 1=SUB   mode: 0=VFO, 1=MEM
-    static std::string setVfoOrMemoryChannel(int vfo, int mode) {
-        char b[8]; snprintf(b,sizeof(b),"VM%d%d;",cat_clamp(vfo,0,1),cat_clamp(mode,0,1)); return b;
-    }
-    static std::string getVfoOrMemoryChannel(int vfo=0) {
-        char b[6]; snprintf(b,sizeof(b),"VM%d;",cat_clamp(vfo,0,1)); return b;
-    }
+    // VM — VFO / Memory Channel  vfo: 0=MAIN 1=SUB  mode: 0=VFO 1=MEM
+    static std::string setVfoOrMemoryChannel(int vfo, int mode);
+    static std::string getVfoOrMemoryChannel(int vfo = 0);
 
-    // ── VS: VFO SELECT ──────────────────────────────────────────────────
-    // vfo: 0=VFO-A, 1=VFO-B
-    static std::string setVfoSelect(int vfo) {
-        char b[6]; snprintf(b,sizeof(b),"VS%d;",cat_clamp(vfo,0,1)); return b;
-    }
-    static std::string getVfoSelect() { return "VS;"; }
+    // VS — VFO Select  vfo: 0=VFO-A 1=VFO-B
+    static std::string setVfoSelect(int vfo);
+    static std::string getVfoSelect();
 
-    // ── VX: VOX STATUS ──────────────────────────────────────────────────
-    static std::string setVoxStatus(bool on) { return on ? "VX1;" : "VX0;"; }
-    static std::string getVoxStatus()        { return "VX;"; }
+    // VX — VOX Status
+    static std::string setVoxStatus(bool on);
+    static std::string getVoxStatus();
 
-    // ── ZI: ZERO IN ─────────────────────────────────────────────────────
-    static std::string setZeroIn() { return "ZI;"; }
+    // ZI — Zero In
+    static std::string setZeroIn();
 
     // ====================================================================
-    // SECTION 2 — EX EXTENDED MENU COMMANDS (pages 9–27)
-    // Named from the advance manual table section titles.
-    // Format: EX[4-digit menu number][value digits];
-    // Menu numbers are from the FTX-1 advance manual tables.
+    //  SECTION 2 — EX EXTENDED MENU (pages 9–27)
     // ====================================================================
 
-    // ─── MODE SSB (pages 9-10) ──────────────────────────────────────────
-
-    // AF Treble Gain: -20..+10 dB  (EX0101)
-    static std::string setAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(101, v);
-    }
-    static std::string getAfTrebleGain() { return getMenuRaw(101); }
-
-    // AF Middle Tone Gain: -20..+10 dB  (EX0102)
-    static std::string setAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(102, v);
-    }
-    static std::string getAfMiddleToneGain() { return getMenuRaw(102); }
-
-    // AF Bass Gain: -20..+10 dB  (EX0103)
-    static std::string setAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(103, v);
-    }
-    static std::string getAfBassGain() { return getMenuRaw(103); }
-
-    // AGC Fast Delay: 20-4000 ms in 20ms steps  (EX0104)
-    static std::string setAgcFastDelay(int ms) {
-        ms=cat_clamp(ms,20,4000);
-        char v[8]; snprintf(v,sizeof(v),"%04d",ms);
-        return setMenuRaw(104, v);
-    }
-    static std::string getAgcFastDelay() { return getMenuRaw(104); }
-
-    // AGC Mid Delay: 20-4000 ms  (EX0105)
-    static std::string setAgcMidDelay(int ms) {
-        ms=cat_clamp(ms,20,4000);
-        char v[8]; snprintf(v,sizeof(v),"%04d",ms);
-        return setMenuRaw(105, v);
-    }
-    static std::string getAgcMidDelay() { return getMenuRaw(105); }
-
-    // AGC Slow Delay: 20-4000 ms  (EX0106)
-    static std::string setAgcSlowDelay(int ms) {
-        ms=cat_clamp(ms,20,4000);
-        char v[8]; snprintf(v,sizeof(v),"%04d",ms);
-        return setMenuRaw(106, v);
-    }
-    static std::string getAgcSlowDelay() { return getMenuRaw(106); }
-
-    // LCUT Freq: 0=OFF, 1-20=100-1050Hz (50Hz steps)  (EX0107)
-    static std::string setLcutFreq(int idx) {
-        idx=cat_clamp(idx,0,20);
-        char v[4]; snprintf(v,sizeof(v),"%02d",idx);
-        return setMenuRaw(107, v);
-    }
-    static std::string getLcutFreq() { return getMenuRaw(107); }
-
-    // LCUT Slope: 0=6dB/oct, 1=18dB/oct  (EX0108)
-    static std::string setLcutSlope(int slope) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(slope,0,1));
-        return setMenuRaw(108, v);
-    }
-    static std::string getLcutSlope() { return getMenuRaw(108); }
-
-    // HCUT Freq: 0=OFF, 1-67=700-4000Hz (50Hz steps)  (EX0109)
-    static std::string setHcutFreq(int idx) {
-        idx=cat_clamp(idx,0,67);
-        char v[4]; snprintf(v,sizeof(v),"%02d",idx);
-        return setMenuRaw(109, v);
-    }
-    static std::string getHcutFreq() { return getMenuRaw(109); }
-
-    // HCUT Slope: 0=6dB/oct, 1=18dB/oct  (EX0110)
-    static std::string setHcutSlope(int slope) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(slope,0,1));
-        return setMenuRaw(110, v);
-    }
-    static std::string getHcutSlope() { return getMenuRaw(110); }
-
-    // USB Out Level: 0-100  (EX0111)
-    static std::string setUsbOutLevel(int level) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(level,0,100));
-        return setMenuRaw(111, v);
-    }
-    static std::string getUsbOutLevel() { return getMenuRaw(111); }
-
-    // TX BPF Sel: 0=100-3000, 1=100-2900, 2=200-2800, 3=300-2700, 4=400-2600  (EX0112)
-    static std::string setTxBpfSel(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,4));
-        return setMenuRaw(112, v);
-    }
-    static std::string getTxBpfSel() { return getMenuRaw(112); }
-
-    // Mod Source: 0=MIC, 1=REAR, 2=USB  (EX0113)
-    static std::string setModSource(int src) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(src,0,2));
-        return setMenuRaw(113, v);
-    }
-    static std::string getModSource() { return getMenuRaw(113); }
-
-    // USB Mod Gain: 0-100  (EX0114)
-    static std::string setUsbModGain(int gain) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(gain,0,100));
-        return setMenuRaw(114, v);
-    }
-    static std::string getUsbModGain() { return getMenuRaw(114); }
-
-    // RPTT Select: 0=DAKY, 1=RTS, 2=DTR  (EX0115)
-    static std::string setRpttSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(115, v);
-    }
-    static std::string getRpttSelect() { return getMenuRaw(115); }
-
-    // ─── MODE CW (pages 11-12) ──────────────────────────────────────────
-
-    // CW AF Treble Gain: -20..+10 dB  (EX0201)
-    static std::string setCwAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(201, v);
-    }
-    static std::string getCwAfTrebleGain() { return getMenuRaw(201); }
-
-    // CW AF Middle Tone Gain: -20..+10 dB  (EX0202)
-    static std::string setCwAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(202, v);
-    }
-    static std::string getCwAfMiddleToneGain() { return getMenuRaw(202); }
-
-    // CW AF Bass Gain: -20..+10 dB  (EX0203)
-    static std::string setCwAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(203, v);
-    }
-    static std::string getCwAfBassGain() { return getMenuRaw(203); }
-
-    // CW AGC Fast Delay: 20-4000ms  (EX0204)
-    static std::string setCwAgcFastDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(204, v);
-    }
-    static std::string getCwAgcFastDelay() { return getMenuRaw(204); }
-
-    // CW AGC Mid Delay: 20-4000ms  (EX0205)
-    static std::string setCwAgcMidDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(205, v);
-    }
-    static std::string getCwAgcMidDelay() { return getMenuRaw(205); }
-
-    // CW AGC Slow Delay: 20-4000ms  (EX0206)
-    static std::string setCwAgcSlowDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(206, v);
-    }
-    static std::string getCwAgcSlowDelay() { return getMenuRaw(206); }
-
-    // CW LCUT Freq: 0=OFF, 1-20=100-1050Hz  (EX0207)
-    static std::string setCwLcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(207, v);
-    }
-    static std::string getCwLcutFreq() { return getMenuRaw(207); }
-
-    // CW LCUT Slope: 0=6dB/oct, 1=18dB/oct  (EX0208)
-    static std::string setCwLcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(208, v);
-    }
-    static std::string getCwLcutSlope() { return getMenuRaw(208); }
-
-    // CW HCUT Freq: 0=OFF, 1-67=700-4000Hz  (EX0209)
-    static std::string setCwHcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,67));
-        return setMenuRaw(209, v);
-    }
-    static std::string getCwHcutFreq() { return getMenuRaw(209); }
-
-    // CW HCUT Slope: 0=6dB/oct, 1=18dB/oct  (EX0210)
-    static std::string setCwHcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(210, v);
-    }
-    static std::string getCwHcutSlope() { return getMenuRaw(210); }
-
-    // CW Out Level: 0-100  (EX0211)
-    static std::string setCwOutLevel(int level) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(level,0,100));
-        return setMenuRaw(211, v);
-    }
-    static std::string getCwOutLevel() { return getMenuRaw(211); }
-
-    // CW Auto Mode: 0=OFF, 1=50ms, 2=ON  (EX0212)
-    static std::string setCwAutoMode(int mode) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(mode,0,2));
-        return setMenuRaw(212, v);
-    }
-    static std::string getCwAutoMode() { return getMenuRaw(212); }
-
-    // NAR Width (CW): 0=NARROW 1=MEDIUM 2=WIDE  (EX0213)
-    static std::string setCwNarWidth(int w) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(w,0,2));
-        return setMenuRaw(213, v);
-    }
-    static std::string getCwNarWidth() { return getMenuRaw(213); }
-
-    // CW PC Keying: 0=OFF, 1=RTS, 2=DTR  (EX0214)
-    static std::string setCwPcKeying(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(214, v);
-    }
-    static std::string getCwPcKeying() { return getMenuRaw(214); }
-
-    // CW Indicator: 0=OFF, 1=ON  (EX0215)
-    static std::string setCwIndicator(bool on) {
-        return setMenuRaw(215, on?"1":"0");
-    }
-    static std::string getCwIndicator() { return getMenuRaw(215); }
-
-    // ─── MODE AM (pages 13-14) ──────────────────────────────────────────
-
-    // AM AF Treble Gain: -20..+10 dB  (EX0301)
-    static std::string setAmAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(301, v);
-    }
-    static std::string getAmAfTrebleGain() { return getMenuRaw(301); }
-
-    // AM AF Middle Tone Gain  (EX0302)
-    static std::string setAmAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(302, v);
-    }
-    static std::string getAmAfMiddleToneGain() { return getMenuRaw(302); }
-
-    // AM AF Bass Gain  (EX0303)
-    static std::string setAmAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(303, v);
-    }
-    static std::string getAmAfBassGain() { return getMenuRaw(303); }
-
-    // AM AGC Fast Delay  (EX0304)
-    static std::string setAmAgcFastDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(304, v);
-    }
-    static std::string getAmAgcFastDelay() { return getMenuRaw(304); }
-
-    // AM AGC Mid Delay  (EX0305)
-    static std::string setAmAgcMidDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(305, v);
-    }
-    static std::string getAmAgcMidDelay() { return getMenuRaw(305); }
-
-    // AM AGC Slow Delay  (EX0306)
-    static std::string setAmAgcSlowDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(306, v);
-    }
-    static std::string getAmAgcSlowDelay() { return getMenuRaw(306); }
-
-    // AM LCUT Freq  (EX0307)
-    static std::string setAmLcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(307, v);
-    }
-    static std::string getAmLcutFreq() { return getMenuRaw(307); }
-
-    // AM LCUT Slope  (EX0308)
-    static std::string setAmLcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(308, v);
-    }
-    static std::string getAmLcutSlope() { return getMenuRaw(308); }
-
-    // AM HCUT Freq  (EX0309)
-    static std::string setAmHcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,67));
-        return setMenuRaw(309, v);
-    }
-    static std::string getAmHcutFreq() { return getMenuRaw(309); }
-
-    // AM HCUT Slope  (EX0310)
-    static std::string setAmHcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(310, v);
-    }
-    static std::string getAmHcutSlope() { return getMenuRaw(310); }
-
-    // AM Mod Source  (EX0311)
-    static std::string setAmModSource(int src) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(src,0,2));
-        return setMenuRaw(311, v);
-    }
-    static std::string getAmModSource() { return getMenuRaw(311); }
-
-    // AM USB Mod Gain  (EX0312)
-    static std::string setAmUsbModGain(int gain) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(gain,0,100));
-        return setMenuRaw(312, v);
-    }
-    static std::string getAmUsbModGain() { return getMenuRaw(312); }
-
-    // AM RPTT Select  (EX0313)
-    static std::string setAmRpttSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(313, v);
-    }
-    static std::string getAmRpttSelect() { return getMenuRaw(313); }
-
-    // ─── MODE FM (pages 15-16) ──────────────────────────────────────────
-
-    // FM AF Treble Gain  (EX0401)
-    static std::string setFmAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(401, v);
-    }
-    static std::string getFmAfTrebleGain() { return getMenuRaw(401); }
-
-    // FM AF Middle Tone Gain  (EX0402)
-    static std::string setFmAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(402, v);
-    }
-    static std::string getFmAfMiddleToneGain() { return getMenuRaw(402); }
-
-    // FM AF Bass Gain  (EX0403)
-    static std::string setFmAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(403, v);
-    }
-    static std::string getFmAfBassGain() { return getMenuRaw(403); }
-
-    // FM AGC Fast Delay  (EX0404)
-    static std::string setFmAgcFastDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(404, v);
-    }
-    static std::string getFmAgcFastDelay() { return getMenuRaw(404); }
-
-    // FM AGC Mid Delay  (EX0405)
-    static std::string setFmAgcMidDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(405, v);
-    }
-    static std::string getFmAgcMidDelay() { return getMenuRaw(405); }
-
-    // FM AGC Slow Delay  (EX0406)
-    static std::string setFmAgcSlowDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(406, v);
-    }
-    static std::string getFmAgcSlowDelay() { return getMenuRaw(406); }
-
-    // FM LCUT Freq  (EX0407)
-    static std::string setFmLcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(407, v);
-    }
-    static std::string getFmLcutFreq() { return getMenuRaw(407); }
-
-    // FM LCUT Slope  (EX0408)
-    static std::string setFmLcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(408, v);
-    }
-    static std::string getFmLcutSlope() { return getMenuRaw(408); }
-
-    // FM HCUT Freq  (EX0409)
-    static std::string setFmHcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,67));
-        return setMenuRaw(409, v);
-    }
-    static std::string getFmHcutFreq() { return getMenuRaw(409); }
-
-    // FM HCUT Slope  (EX0410)
-    static std::string setFmHcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(410, v);
-    }
-    static std::string getFmHcutSlope() { return getMenuRaw(410); }
-
-    // FM Mod Source  (EX0411)
-    static std::string setFmModSource(int src) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(src,0,2));
-        return setMenuRaw(411, v);
-    }
-    static std::string getFmModSource() { return getMenuRaw(411); }
-
-    // FM USB Mod Gain  (EX0412)
-    static std::string setFmUsbModGain(int gain) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(gain,0,100));
-        return setMenuRaw(412, v);
-    }
-    static std::string getFmUsbModGain() { return getMenuRaw(412); }
-
-    // FM RPTT Select  (EX0413)
-    static std::string setFmRpttSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(413, v);
-    }
-    static std::string getFmRpttSelect() { return getMenuRaw(413); }
-
-    // FM RPT Shift (VHF/UHF offset direction): 0=SIMPLEX 1=MINUS 2=PLUS  (EX0414)
-    static std::string setFmRptShift(int dir) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(dir,0,2));
-        return setMenuRaw(414, v);
-    }
-    static std::string getFmRptShift() { return getMenuRaw(414); }
-
-    // FM RPT Shift Freq (144MHz): Hz  (EX0415)
-    static std::string setFmRptShiftFreq144(int hz) {
-        char v[8]; snprintf(v,sizeof(v),"%07d",cat_clamp(hz,0,9999999));
-        return setMenuRaw(415, v);
-    }
-    static std::string getFmRptShiftFreq144() { return getMenuRaw(415); }
-
-    // FM RPT Shift Freq (430MHz): Hz  (EX0416)
-    static std::string setFmRptShiftFreq430(int hz) {
-        char v[8]; snprintf(v,sizeof(v),"%07d",cat_clamp(hz,0,9999999));
-        return setMenuRaw(416, v);
-    }
-    static std::string getFmRptShiftFreq430() { return getMenuRaw(416); }
-
-    // ─── MODE DATA (pages 17-18) ─────────────────────────────────────────
-
-    // DATA AF Treble Gain  (EX0501)
-    static std::string setDataAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(501, v);
-    }
-    static std::string getDataAfTrebleGain() { return getMenuRaw(501); }
-
-    // DATA AF Middle Tone Gain  (EX0502)
-    static std::string setDataAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(502, v);
-    }
-    static std::string getDataAfMiddleToneGain() { return getMenuRaw(502); }
-
-    // DATA AF Bass Gain  (EX0503)
-    static std::string setDataAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(503, v);
-    }
-    static std::string getDataAfBassGain() { return getMenuRaw(503); }
-
-    // DATA AGC Fast Delay  (EX0504)
-    static std::string setDataAgcFastDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(504, v);
-    }
-    static std::string getDataAgcFastDelay() { return getMenuRaw(504); }
-
-    // DATA AGC Mid Delay  (EX0505)
-    static std::string setDataAgcMidDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(505, v);
-    }
-    static std::string getDataAgcMidDelay() { return getMenuRaw(505); }
-
-    // DATA AGC Slow Delay  (EX0506)
-    static std::string setDataAgcSlowDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(506, v);
-    }
-    static std::string getDataAgcSlowDelay() { return getMenuRaw(506); }
-
-    // DATA LCUT Freq  (EX0507)
-    static std::string setDataLcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(507, v);
-    }
-    static std::string getDataLcutFreq() { return getMenuRaw(507); }
-
-    // DATA LCUT Slope  (EX0508)
-    static std::string setDataLcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(508, v);
-    }
-    static std::string getDataLcutSlope() { return getMenuRaw(508); }
-
-    // DATA HCUT Freq  (EX0509)
-    static std::string setDataHcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,67));
-        return setMenuRaw(509, v);
-    }
-    static std::string getDataHcutFreq() { return getMenuRaw(509); }
-
-    // DATA HCUT Slope  (EX0510)
-    static std::string setDataHcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(510, v);
-    }
-    static std::string getDataHcutSlope() { return getMenuRaw(510); }
-
-    // DATA USB Out Level  (EX0511)
-    static std::string setDataUsbOutLevel(int level) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(level,0,100));
-        return setMenuRaw(511, v);
-    }
-    static std::string getDataUsbOutLevel() { return getMenuRaw(511); }
-
-    // DATA TX BPF Sel  (EX0512)
-    static std::string setDataTxBpfSel(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,4));
-        return setMenuRaw(512, v);
-    }
-    static std::string getDataTxBpfSel() { return getMenuRaw(512); }
-
-    // DATA Mod Source  (EX0513)
-    static std::string setDataModSource(int src) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(src,0,2));
-        return setMenuRaw(513, v);
-    }
-    static std::string getDataModSource() { return getMenuRaw(513); }
-
-    // DATA USB Mod Gain  (EX0514)
-    static std::string setDataUsbModGain(int gain) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(gain,0,100));
-        return setMenuRaw(514, v);
-    }
-    static std::string getDataUsbModGain() { return getMenuRaw(514); }
-
-    // DATA RPTT Select  (EX0515)
-    static std::string setDataRpttSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(515, v);
-    }
-    static std::string getDataRpttSelect() { return getMenuRaw(515); }
-
-    // DATA NAR Width  (EX0516)
-    static std::string setDataNarWidth(int w) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(w,0,2));
-        return setMenuRaw(516, v);
-    }
-    static std::string getDataNarWidth() { return getMenuRaw(516); }
-
-    // DATA PSK Tone  (EX0517)
-    static std::string setDataPskTone(int tone) {
-        char v[4]; snprintf(v,sizeof(v),"%03d",cat_clamp(tone,0,255));
-        return setMenuRaw(517, v);
-    }
-    static std::string getDataPskTone() { return getMenuRaw(517); }
-
-    // DATA Shift (SSB): -3000..+3000 Hz  (EX0518)
-    static std::string setDataShiftSsb(int hz) {
-        hz=cat_clamp(hz,-3000,3000);
-        char sign=hz>=0?'+':'-';
-        char v[8]; snprintf(v,sizeof(v),"%c%04d",sign,std::abs(hz));
-        return setMenuRaw(518, v);
-    }
-    static std::string getDataShiftSsb() { return getMenuRaw(518); }
-
-    // ─── MODE RTTY (pages 19-20) ─────────────────────────────────────────
-
-    // RTTY AF Treble Gain  (EX0601)
-    static std::string setRttyAfTrebleGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(601, v);
-    }
-    static std::string getRttyAfTrebleGain() { return getMenuRaw(601); }
-
-    // RTTY AF Middle Tone Gain  (EX0602)
-    static std::string setRttyAfMiddleToneGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(602, v);
-    }
-    static std::string getRttyAfMiddleToneGain() { return getMenuRaw(602); }
-
-    // RTTY AF Bass Gain  (EX0603)
-    static std::string setRttyAfBassGain(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(603, v);
-    }
-    static std::string getRttyAfBassGain() { return getMenuRaw(603); }
-
-    // RTTY AGC Fast Delay  (EX0604)
-    static std::string setRttyAgcFastDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(604, v);
-    }
-    static std::string getRttyAgcFastDelay() { return getMenuRaw(604); }
-
-    // RTTY AGC Mid Delay  (EX0605)
-    static std::string setRttyAgcMidDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(605, v);
-    }
-    static std::string getRttyAgcMidDelay() { return getMenuRaw(605); }
-
-    // RTTY AGC Slow Delay  (EX0606)
-    static std::string setRttyAgcSlowDelay(int ms) {
-        char v[8]; snprintf(v,sizeof(v),"%04d",cat_clamp(ms,20,4000));
-        return setMenuRaw(606, v);
-    }
-    static std::string getRttyAgcSlowDelay() { return getMenuRaw(606); }
-
-    // RTTY LCUT Freq  (EX0607)
-    static std::string setRttyLcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(607, v);
-    }
-    static std::string getRttyLcutFreq() { return getMenuRaw(607); }
-
-    // RTTY LCUT Slope  (EX0608)
-    static std::string setRttyLcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(608, v);
-    }
-    static std::string getRttyLcutSlope() { return getMenuRaw(608); }
-
-    // RTTY HCUT Freq  (EX0609)
-    static std::string setRttyHcutFreq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,67));
-        return setMenuRaw(609, v);
-    }
-    static std::string getRttyHcutFreq() { return getMenuRaw(609); }
-
-    // RTTY HCUT Slope  (EX0610)
-    static std::string setRttyHcutSlope(int s) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(s,0,1));
-        return setMenuRaw(610, v);
-    }
-    static std::string getRttyHcutSlope() { return getMenuRaw(610); }
-
-    // RTTY RPTT Select  (EX0611)
-    static std::string setRttyRpttSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,2));
-        return setMenuRaw(611, v);
-    }
-    static std::string getRttyRpttSelect() { return getMenuRaw(611); }
-
-    // RTTY Mark Frequency: 0=1275Hz, 1=2125Hz  (EX0612)
-    static std::string setRttyMarkFrequency(int f) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(f,0,1));
-        return setMenuRaw(612, v);
-    }
-    static std::string getRttyMarkFrequency() { return getMenuRaw(612); }
-
-    // RTTY Shift Frequency: 0=170Hz 1=200Hz 2=425Hz 3=850Hz  (EX0613)
-    static std::string setRttyShiftFrequency(int idx) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(idx,0,3));
-        return setMenuRaw(613, v);
-    }
-    static std::string getRttyShiftFrequency() { return getMenuRaw(613); }
-
-    // RTTY Polarity TX: 0=NOR, 1=REV  (EX0614)
-    static std::string setRttyPolarityTx(int pol) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(pol,0,1));
-        return setMenuRaw(614, v);
-    }
-    static std::string getRttyPolarityTx() { return getMenuRaw(614); }
-
-    // RTTY Polarity RX: 0=NOR, 1=REV  (EX0615)
-    static std::string setRttyPolarityRx(int pol) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(pol,0,1));
-        return setMenuRaw(615, v);
-    }
-    static std::string getRttyPolarityRx() { return getMenuRaw(615); }
-
-    // ─── TX AUDIO / PARAMETRIC EQ — PROC OFF (pages 21-22) ──────────────
-
-    // PRMTRC EQ1 FREQ (proc OFF): 0-20 → 100-3500Hz table  (EX0701)
-    static std::string setPrmtrcEq1Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(701, v);
-    }
-    static std::string getPrmtrcEq1Freq() { return getMenuRaw(701); }
-
-    // PRMTRC EQ1 LEVEL (proc OFF): -20..+10 dB  (EX0702)
-    static std::string setPrmtrcEq1Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(702, v);
-    }
-    static std::string getPrmtrcEq1Level() { return getMenuRaw(702); }
-
-    // PRMTRC EQ1 BWTH (proc OFF): 1-10  (EX0703)
-    static std::string setPrmtrcEq1Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(703, v);
-    }
-    static std::string getPrmtrcEq1Bwth() { return getMenuRaw(703); }
-
-    // PRMTRC EQ2 FREQ (proc OFF)  (EX0704)
-    static std::string setPrmtrcEq2Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(704, v);
-    }
-    static std::string getPrmtrcEq2Freq() { return getMenuRaw(704); }
-
-    // PRMTRC EQ2 LEVEL (proc OFF)  (EX0705)
-    static std::string setPrmtrcEq2Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(705, v);
-    }
-    static std::string getPrmtrcEq2Level() { return getMenuRaw(705); }
-
-    // PRMTRC EQ2 BWTH (proc OFF)  (EX0706)
-    static std::string setPrmtrcEq2Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(706, v);
-    }
-    static std::string getPrmtrcEq2Bwth() { return getMenuRaw(706); }
-
-    // PRMTRC EQ3 FREQ (proc OFF)  (EX0707)
-    static std::string setPrmtrcEq3Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(707, v);
-    }
-    static std::string getPrmtrcEq3Freq() { return getMenuRaw(707); }
-
-    // PRMTRC EQ3 LEVEL (proc OFF)  (EX0708)
-    static std::string setPrmtrcEq3Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(708, v);
-    }
-    static std::string getPrmtrcEq3Level() { return getMenuRaw(708); }
-
-    // PRMTRC EQ3 BWTH (proc OFF)  (EX0709)
-    static std::string setPrmtrcEq3Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(709, v);
-    }
-    static std::string getPrmtrcEq3Bwth() { return getMenuRaw(709); }
-
-    // ─── TX AUDIO / PARAMETRIC EQ — PROC ON (pages 23-24) ───────────────
-
-    // P PRMTRC EQ1 FREQ (proc ON)  (EX0801)
-    static std::string setPPrmtrcEq1Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(801, v);
-    }
-    static std::string getPPrmtrcEq1Freq() { return getMenuRaw(801); }
-
-    // P PRMTRC EQ1 LEVEL (proc ON): -20..+10 dB  (EX0802)
-    static std::string setPPrmtrcEq1Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(802, v);
-    }
-    static std::string getPPrmtrcEq1Level() { return getMenuRaw(802); }
-
-    // P PRMTRC EQ1 BWTH (proc ON): 1-10  (EX0803)
-    static std::string setPPrmtrcEq1Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(803, v);
-    }
-    static std::string getPPrmtrcEq1Bwth() { return getMenuRaw(803); }
-
-    // P PRMTRC EQ2 FREQ (proc ON)  (EX0804)
-    static std::string setPPrmtrcEq2Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(804, v);
-    }
-    static std::string getPPrmtrcEq2Freq() { return getMenuRaw(804); }
-
-    // P PRMTRC EQ2 LEVEL (proc ON)  (EX0805)
-    static std::string setPPrmtrcEq2Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(805, v);
-    }
-    static std::string getPPrmtrcEq2Level() { return getMenuRaw(805); }
-
-    // P PRMTRC EQ2 BWTH (proc ON)  (EX0806)
-    static std::string setPPrmtrcEq2Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(806, v);
-    }
-    static std::string getPPrmtrcEq2Bwth() { return getMenuRaw(806); }
-
-    // P PRMTRC EQ3 FREQ (proc ON)  (EX0807)
-    static std::string setPPrmtrcEq3Freq(int idx) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(idx,0,20));
-        return setMenuRaw(807, v);
-    }
-    static std::string getPPrmtrcEq3Freq() { return getMenuRaw(807); }
-
-    // P PRMTRC EQ3 LEVEL (proc ON)  (EX0808)
-    static std::string setPPrmtrcEq3Level(int db) {
-        db=cat_clamp(db,-20,10);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(808, v);
-    }
-    static std::string getPPrmtrcEq3Level() { return getMenuRaw(808); }
-
-    // P PRMTRC EQ3 BWTH (proc ON)  (EX0809)
-    static std::string setPPrmtrcEq3Bwth(int bw) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(bw,1,10));
-        return setMenuRaw(809, v);
-    }
-    static std::string getPPrmtrcEq3Bwth() { return getMenuRaw(809); }
-
-    // ─── TX GENERAL (page 25) ────────────────────────────────────────────
-
-    // TX GNRL Max Power (battery): 0.5-6.0W in 0.5W steps  (EX0901)
-    // value: 1-12 where 1=0.5W, 12=6.0W
-    static std::string setTxGnrlMaxPowerBattery(int step) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(step,1,12));
-        return setMenuRaw(901, v);
-    }
-    static std::string getTxGnrlMaxPowerBattery() { return getMenuRaw(901); }
-
-    // ─── RX DSP (page 26) ────────────────────────────────────────────────
-
-    // NB Level: 1-10  (EX1001)
-    static std::string setNbLevel(int level) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(level,1,10));
-        return setMenuRaw(1001, v);
-    }
-    static std::string getNbLevel() { return getMenuRaw(1001); }
-
-    // NB Width: 1-9  (EX1002)
-    static std::string setNbWidth(int width) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(width,1,9));
-        return setMenuRaw(1002, v);
-    }
-    static std::string getNbWidth() { return getMenuRaw(1002); }
-
-    // NR Level: 1-15  (EX1003)
-    static std::string setNrLevel(int level) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(level,1,15));
-        return setMenuRaw(1003, v);
-    }
-    static std::string getNrLevel() { return getMenuRaw(1003); }
-
-    // Contour Level: -40..+20 dB  (EX1004)
-    static std::string setContourLevel(int db) {
-        db=cat_clamp(db,-40,20);
-        char v[4]; snprintf(v,sizeof(v),"%+03d",db);
-        return setMenuRaw(1004, v);
-    }
-    static std::string getContourLevel() { return getMenuRaw(1004); }
-
-    // Contour Width (Q): 1-11  (EX1005)
-    static std::string setContourWidth(int q) {
-        char v[4]; snprintf(v,sizeof(v),"%02d",cat_clamp(q,1,11));
-        return setMenuRaw(1005, v);
-    }
-    static std::string getContourWidth() { return getMenuRaw(1005); }
-
-    // IF Notch Width: 0=NARROW, 1=WIDE  (EX1006)
-    static std::string setIfNotchWidth(int w) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(w,0,1));
-        return setMenuRaw(1006, v);
-    }
-    static std::string getIfNotchWidth() { return getMenuRaw(1006); }
-
-    // APF Width: 0=NARROW 1=MEDIUM 2=WIDE  (EX1007)
-    static std::string setApfWidth(int w) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(w,0,2));
-        return setMenuRaw(1007, v);
-    }
-    static std::string getApfWidth() { return getMenuRaw(1007); }
-
-    // ─── VOX SELECT / KEY / DIAL (pages 26-27) ───────────────────────────
-
-    // VOX Select: 0=MIC, 1=DATA  (EX1101)
-    static std::string setVoxSelect(int sel) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(sel,0,1));
-        return setMenuRaw(1101, v);
-    }
-    static std::string getVoxSelect() { return getMenuRaw(1101); }
-
-    // Emergency Freq TX: 0=OFF, 1=ON  (EX1102)
-    static std::string setEmergencyFreqTx(bool on) {
-        return setMenuRaw(1102, on?"1":"0");
-    }
-    static std::string getEmergencyFreqTx() { return getMenuRaw(1102); }
-
-    // Mic Up: 0=UP, 1=DOWN (key assignment)  (EX1201)
-    static std::string setMicUpAssign(int dir) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(dir,0,1));
-        return setMenuRaw(1201, v);
-    }
-    static std::string getMicUpAssign() { return getMenuRaw(1201); }
-
-    // Dial Step (VFO): 0=1Hz 1=10Hz 2=20Hz 3=100Hz 4=500Hz 5=1kHz  (EX1301)
-    static std::string setDialStep(int step) {
-        char v[2]; snprintf(v,sizeof(v),"%d",cat_clamp(step,0,5));
-        return setMenuRaw(1301, v);
-    }
-    static std::string getDialStep() { return getMenuRaw(1301); }
+    // ── MODE SSB ──────────────────────────────────────────────────────────
+    static std::string setAfTrebleGain(int db);       static std::string getAfTrebleGain();
+    static std::string setAfMiddleToneGain(int db);   static std::string getAfMiddleToneGain();
+    static std::string setAfBassGain(int db);         static std::string getAfBassGain();
+    static std::string setAgcFastDelay(int ms);       static std::string getAgcFastDelay();
+    static std::string setAgcMidDelay(int ms);        static std::string getAgcMidDelay();
+    static std::string setAgcSlowDelay(int ms);       static std::string getAgcSlowDelay();
+    static std::string setLcutFreq(int idx);          static std::string getLcutFreq();
+    static std::string setLcutSlope(int slope);       static std::string getLcutSlope();
+    static std::string setHcutFreq(int idx);          static std::string getHcutFreq();
+    static std::string setHcutSlope(int slope);       static std::string getHcutSlope();
+    static std::string setUsbOutLevel(int level);     static std::string getUsbOutLevel();
+    static std::string setTxBpfSel(int sel);          static std::string getTxBpfSel();
+    static std::string setModSource(int src);         static std::string getModSource();
+    static std::string setUsbModGain(int gain);       static std::string getUsbModGain();
+    static std::string setRpttSelect(int sel);        static std::string getRpttSelect();
+
+    // ── MODE CW ───────────────────────────────────────────────────────────
+    static std::string setCwAfTrebleGain(int db);     static std::string getCwAfTrebleGain();
+    static std::string setCwAfMiddleToneGain(int db); static std::string getCwAfMiddleToneGain();
+    static std::string setCwAfBassGain(int db);       static std::string getCwAfBassGain();
+    static std::string setCwAgcFastDelay(int ms);     static std::string getCwAgcFastDelay();
+    static std::string setCwAgcMidDelay(int ms);      static std::string getCwAgcMidDelay();
+    static std::string setCwAgcSlowDelay(int ms);     static std::string getCwAgcSlowDelay();
+    static std::string setCwLcutFreq(int idx);        static std::string getCwLcutFreq();
+    static std::string setCwLcutSlope(int s);         static std::string getCwLcutSlope();
+    static std::string setCwHcutFreq(int idx);        static std::string getCwHcutFreq();
+    static std::string setCwHcutSlope(int s);         static std::string getCwHcutSlope();
+    static std::string setCwOutLevel(int level);      static std::string getCwOutLevel();
+    static std::string setCwAutoMode(int mode);       static std::string getCwAutoMode();
+    static std::string setCwNarWidth(int w);          static std::string getCwNarWidth();
+    static std::string setCwPcKeying(int sel);        static std::string getCwPcKeying();
+    static std::string setCwIndicator(bool on);       static std::string getCwIndicator();
+
+    // ── MODE AM ───────────────────────────────────────────────────────────
+    static std::string setAmAfTrebleGain(int db);     static std::string getAmAfTrebleGain();
+    static std::string setAmAfMiddleToneGain(int db); static std::string getAmAfMiddleToneGain();
+    static std::string setAmAfBassGain(int db);       static std::string getAmAfBassGain();
+    static std::string setAmAgcFastDelay(int ms);     static std::string getAmAgcFastDelay();
+    static std::string setAmAgcMidDelay(int ms);      static std::string getAmAgcMidDelay();
+    static std::string setAmAgcSlowDelay(int ms);     static std::string getAmAgcSlowDelay();
+    static std::string setAmLcutFreq(int idx);        static std::string getAmLcutFreq();
+    static std::string setAmLcutSlope(int s);         static std::string getAmLcutSlope();
+    static std::string setAmHcutFreq(int idx);        static std::string getAmHcutFreq();
+    static std::string setAmHcutSlope(int s);         static std::string getAmHcutSlope();
+    static std::string setAmModSource(int src);       static std::string getAmModSource();
+    static std::string setAmUsbModGain(int gain);     static std::string getAmUsbModGain();
+    static std::string setAmRpttSelect(int sel);      static std::string getAmRpttSelect();
+
+    // ── MODE FM ───────────────────────────────────────────────────────────
+    static std::string setFmAfTrebleGain(int db);     static std::string getFmAfTrebleGain();
+    static std::string setFmAfMiddleToneGain(int db); static std::string getFmAfMiddleToneGain();
+    static std::string setFmAfBassGain(int db);       static std::string getFmAfBassGain();
+    static std::string setFmAgcFastDelay(int ms);     static std::string getFmAgcFastDelay();
+    static std::string setFmAgcMidDelay(int ms);      static std::string getFmAgcMidDelay();
+    static std::string setFmAgcSlowDelay(int ms);     static std::string getFmAgcSlowDelay();
+    static std::string setFmLcutFreq(int idx);        static std::string getFmLcutFreq();
+    static std::string setFmLcutSlope(int s);         static std::string getFmLcutSlope();
+    static std::string setFmHcutFreq(int idx);        static std::string getFmHcutFreq();
+    static std::string setFmHcutSlope(int s);         static std::string getFmHcutSlope();
+    static std::string setFmModSource(int src);       static std::string getFmModSource();
+    static std::string setFmUsbModGain(int gain);     static std::string getFmUsbModGain();
+    static std::string setFmRpttSelect(int sel);      static std::string getFmRpttSelect();
+    static std::string setFmRptShift(int dir);        static std::string getFmRptShift();
+    static std::string setFmRptShiftFreq144(int hz);  static std::string getFmRptShiftFreq144();
+    static std::string setFmRptShiftFreq430(int hz);  static std::string getFmRptShiftFreq430();
+
+    // ── MODE DATA ─────────────────────────────────────────────────────────
+    static std::string setDataAfTrebleGain(int db);     static std::string getDataAfTrebleGain();
+    static std::string setDataAfMiddleToneGain(int db); static std::string getDataAfMiddleToneGain();
+    static std::string setDataAfBassGain(int db);       static std::string getDataAfBassGain();
+    static std::string setDataAgcFastDelay(int ms);     static std::string getDataAgcFastDelay();
+    static std::string setDataAgcMidDelay(int ms);      static std::string getDataAgcMidDelay();
+    static std::string setDataAgcSlowDelay(int ms);     static std::string getDataAgcSlowDelay();
+    static std::string setDataLcutFreq(int idx);        static std::string getDataLcutFreq();
+    static std::string setDataLcutSlope(int s);         static std::string getDataLcutSlope();
+    static std::string setDataHcutFreq(int idx);        static std::string getDataHcutFreq();
+    static std::string setDataHcutSlope(int s);         static std::string getDataHcutSlope();
+    static std::string setDataUsbOutLevel(int level);   static std::string getDataUsbOutLevel();
+    static std::string setDataTxBpfSel(int sel);        static std::string getDataTxBpfSel();
+    static std::string setDataModSource(int src);       static std::string getDataModSource();
+    static std::string setDataUsbModGain(int gain);     static std::string getDataUsbModGain();
+    static std::string setDataRpttSelect(int sel);      static std::string getDataRpttSelect();
+    static std::string setDataNarWidth(int w);          static std::string getDataNarWidth();
+    static std::string setDataPskTone(int tone);        static std::string getDataPskTone();
+    static std::string setDataShiftSsb(int hz);         static std::string getDataShiftSsb();
+
+    // ── MODE RTTY ─────────────────────────────────────────────────────────
+    static std::string setRttyAfTrebleGain(int db);     static std::string getRttyAfTrebleGain();
+    static std::string setRttyAfMiddleToneGain(int db); static std::string getRttyAfMiddleToneGain();
+    static std::string setRttyAfBassGain(int db);       static std::string getRttyAfBassGain();
+    static std::string setRttyAgcFastDelay(int ms);     static std::string getRttyAgcFastDelay();
+    static std::string setRttyAgcMidDelay(int ms);      static std::string getRttyAgcMidDelay();
+    static std::string setRttyAgcSlowDelay(int ms);     static std::string getRttyAgcSlowDelay();
+    static std::string setRttyLcutFreq(int idx);        static std::string getRttyLcutFreq();
+    static std::string setRttyLcutSlope(int s);         static std::string getRttyLcutSlope();
+    static std::string setRttyHcutFreq(int idx);        static std::string getRttyHcutFreq();
+    static std::string setRttyHcutSlope(int s);         static std::string getRttyHcutSlope();
+    static std::string setRttyRpttSelect(int sel);      static std::string getRttyRpttSelect();
+    static std::string setRttyMarkFrequency(int f);     static std::string getRttyMarkFrequency();
+    static std::string setRttyShiftFrequency(int idx);  static std::string getRttyShiftFrequency();
+    static std::string setRttyPolarityTx(int pol);      static std::string getRttyPolarityTx();
+    static std::string setRttyPolarityRx(int pol);      static std::string getRttyPolarityRx();
+
+    // ── TX PARAMETRIC EQ — PROCESSOR OFF ─────────────────────────────────
+    static std::string setPrmtrcEq1Freq(int idx);   static std::string getPrmtrcEq1Freq();
+    static std::string setPrmtrcEq1Level(int db);   static std::string getPrmtrcEq1Level();
+    static std::string setPrmtrcEq1Bwth(int bw);    static std::string getPrmtrcEq1Bwth();
+    static std::string setPrmtrcEq2Freq(int idx);   static std::string getPrmtrcEq2Freq();
+    static std::string setPrmtrcEq2Level(int db);   static std::string getPrmtrcEq2Level();
+    static std::string setPrmtrcEq2Bwth(int bw);    static std::string getPrmtrcEq2Bwth();
+    static std::string setPrmtrcEq3Freq(int idx);   static std::string getPrmtrcEq3Freq();
+    static std::string setPrmtrcEq3Level(int db);   static std::string getPrmtrcEq3Level();
+    static std::string setPrmtrcEq3Bwth(int bw);    static std::string getPrmtrcEq3Bwth();
+
+    // ── TX PARAMETRIC EQ — PROCESSOR ON ──────────────────────────────────
+    static std::string setPPrmtrcEq1Freq(int idx);  static std::string getPPrmtrcEq1Freq();
+    static std::string setPPrmtrcEq1Level(int db);  static std::string getPPrmtrcEq1Level();
+    static std::string setPPrmtrcEq1Bwth(int bw);   static std::string getPPrmtrcEq1Bwth();
+    static std::string setPPrmtrcEq2Freq(int idx);  static std::string getPPrmtrcEq2Freq();
+    static std::string setPPrmtrcEq2Level(int db);  static std::string getPPrmtrcEq2Level();
+    static std::string setPPrmtrcEq2Bwth(int bw);   static std::string getPPrmtrcEq2Bwth();
+    static std::string setPPrmtrcEq3Freq(int idx);  static std::string getPPrmtrcEq3Freq();
+    static std::string setPPrmtrcEq3Level(int db);  static std::string getPPrmtrcEq3Level();
+    static std::string setPPrmtrcEq3Bwth(int bw);   static std::string getPPrmtrcEq3Bwth();
+
+    // ── TX GENERAL ────────────────────────────────────────────────────────
+    static std::string setTxGnrlMaxPowerBattery(int step);
+    static std::string getTxGnrlMaxPowerBattery();
+
+    // ── RX DSP ────────────────────────────────────────────────────────────
+    static std::string setNbLevel(int level);       static std::string getNbLevel();
+    static std::string setNbWidth(int width);       static std::string getNbWidth();
+    static std::string setNrLevel(int level);       static std::string getNrLevel();
+    static std::string setContourLevel(int db);     static std::string getContourLevel();
+    static std::string setContourWidth(int q);      static std::string getContourWidth();
+    static std::string setIfNotchWidth(int w);      static std::string getIfNotchWidth();
+    static std::string setApfWidth(int w);          static std::string getApfWidth();
+
+    // ── VOX / KEY / DIAL ─────────────────────────────────────────────────
+    static std::string setVoxSelect(int sel);       static std::string getVoxSelect();
+    static std::string setEmergencyFreqTx(bool on); static std::string getEmergencyFreqTx();
+    static std::string setMicUpAssign(int dir);     static std::string getMicUpAssign();
+    static std::string setDialStep(int step);       static std::string getDialStep();
 
     // ====================================================================
-    // SECTION 3 — RESPONSE PARSING HELPERS
+    //  SECTION 3 — RESPONSE PARSING HELPERS
     // ====================================================================
 
-    // Parse RM response: "RM[id][6-digit raw];"  →  raw 0-255
-    static int parseReadMeter(const std::string& r, int& meterId) {
-        if (r.size() < 9 || r.substr(0,2) != "RM") { meterId=-1; return 0; }
-        meterId = r[2]-'0';
-        try { return std::min(255, std::stoi(r.substr(3,6))); } catch(...) { return 0; }
-    }
+    // Parse RM response → raw 0-255; sets meterId
+    static int  parseReadMeter(const std::string& r, int& meterId);
 
-    // Parse FA/FB frequency response  →  Hz
-    static long long parseFrequency(const std::string& r) {
-        if (r.size() < 11) return 0;
-        try { return std::stoll(r.substr(2,9)); } catch(...) { return 0; }
-    }
+    // Parse FA/FB response → Hz
+    static long long parseFrequency(const std::string& r);
 
-    // Parse MD mode response: "MD[vfo][mode];"  →  mode 0-9
-    static int parseMode(const std::string& r, int& vfo) {
-        if (r.size() < 4 || r.substr(0,2) != "MD") { vfo=-1; return -1; }
-        vfo  = r[2]-'0';
-        return r[3]-'0';
-    }
+    // Parse MD response → mode index 0-9; sets vfo
+    static int  parseMode(const std::string& r, int& vfo);
 
-    // Parse TX response: "TX[0|1|2];"
-    static bool parseTx(const std::string& r) {
-        return r.size() >= 3 && r.substr(0,2) == "TX" && r[2] != '0';
-    }
+    // Parse TX response → true if transmitting
+    static bool parseTx(const std::string& r);
 
-    // Map mode index to name
-    static const char* modeName(int idx) {
-        static const char* names[] = {
-            "LSB","USB","CW","CW-R","AM","FM","DATA-L","DATA-U","DATA-FM","C4FM"
-        };
-        if (idx < 0 || idx > 9) return "?";
-        return names[idx];
-    }
+    // Map mode index to name string
+    static const char* modeName(int idx);
 };
