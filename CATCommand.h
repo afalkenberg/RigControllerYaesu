@@ -431,6 +431,7 @@ public:
 
     // ── RC: CLAR/RIT CLEAR ──────────────────────────────────────────────
     static std::string setClarClear() { return "RC;"; }
+    static std::string clearRitXit() { return "RC;"; }
 
     // ── RD: RIT/XIT DOWN ────────────────────────────────────────────────
     // steps: number of 10-Hz steps down

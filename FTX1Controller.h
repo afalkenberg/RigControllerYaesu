@@ -9,6 +9,14 @@
  */
 
 #pragma once
+
+#include "httplib.h"
+#include "json.hpp"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 #include <string>
 #include <map>
 #include <mutex>
@@ -18,7 +26,6 @@
 #include <functional>
 #include <vector>
 #include "CATCommand.h"
-#include "json.hpp"
 
 using json = nlohmann::json;
 

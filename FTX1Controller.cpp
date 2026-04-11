@@ -53,8 +53,7 @@ bool FTX1Controller::serialIsOpen() const { return serialOpen_; }
 bool FTX1Controller::serialWrite(const std::string& cmd) {
     if (!serialOpen_ || cmd.empty()) return false;
     DWORD written;
-    return WriteFile(hSerial_, cmd.data(), (DWORD)cmd.size(), &written, nullptr)
-        && written == (DWORD)cmd.size();
+    return (WriteFile(hSerial_, cmd.data(), (DWORD)cmd.size(), &written, nullptr) && written == (DWORD)cmd.size());
 }
 
 std::string FTX1Controller::serialReadResponse(int timeoutMs) {
