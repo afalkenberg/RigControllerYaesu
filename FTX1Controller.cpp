@@ -4,6 +4,13 @@
  * Implementation of FTX1Controller.
  */
 
+// httplib must come before windows.h to avoid winsock redefinition
+#include "httplib.h"
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
 #include "FTX1Controller.h"
 #include <algorithm>
 #include <cstdio>
@@ -53,7 +60,8 @@ bool FTX1Controller::serialIsOpen() const { return serialOpen_; }
 bool FTX1Controller::serialWrite(const std::string& cmd) {
     if (!serialOpen_ || cmd.empty()) return false;
     DWORD written;
-    return (WriteFile(hSerial_, cmd.data(), (DWORD)cmd.size(), &written, nullptr) && written == (DWORD)cmd.size());
+    return WriteFile(hSerial_, cmd.data(), (DWORD)cmd.size(), &written, nullptr)
+        && written == (DWORD)cmd.size();
 }
 
 std::string FTX1Controller::serialReadResponse(int timeoutMs) {
@@ -377,6 +385,13 @@ bool FTX1Controller::sendRaw(const std::string& cmd) {
 std::string FTX1Controller::getLastRawResponse() const {
     std::lock_guard<std::mutex> lk(mx_);
     return lastRaw_;
+}
+
+std::string FTX1Controller::query(const std::string& cmd, int timeoutMs) {
+    std::lock_guard<std::mutex> lk(mx_);
+    if (!serialOpen_) return "";
+    serialWrite(cmd);
+    return serialReadResponse(timeoutMs);
 }
 
 // ============================================================================
