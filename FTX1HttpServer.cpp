@@ -116,12 +116,12 @@ void FTX1HttpServer::setupRoutes() {
 
     // GET /api/frequency/main
     svr_.Get("/api/frequency/main", [this](const httplib::Request&, httplib::Response& res) {
-        ok(res, rig_.getMainSideFrequency());
+        okJson(res, queryResult(rig_, CATCommand::getMainSideFrequency()));
     });
 
     // GET /api/frequency/sub
     svr_.Get("/api/frequency/sub", [this](const httplib::Request&, httplib::Response& res) {
-        ok(res, rig_.getSubSideFrequency());
+        okJson(res, queryResult(rig_, CATCommand::getSubSideFrequency()));
     });
 
     // ====================================================================
@@ -933,20 +933,15 @@ void FTX1HttpServer::setupRoutes() {
     //  METERS
     // ====================================================================
 
-    // GET /api/meters   →  all 8 meter values from current state
+    // GET /api/meters   →  all 8 meter values, synchronously read
     svr_.Get("/api/meters", [this](const httplib::Request&, httplib::Response& res) {
-        rig_.readAllMeters();
-        auto s = rig_.getStatus();
-        okJson(res, json {
-            {"smeter_main", s["smeter_main"]},
-            {"smeter_sub",  s["smeter_sub"]},
-            {"comp",        s["comp"]},
-            {"alc",         s["alc"]},
-            {"po",          s["po"]},
-            {"swr",         s["swr"]},
-            {"idd",         s["idd"]},
-            {"vdd",         s["vdd"]}
-        });
+        json j; j["ok"] = true;
+        const char* names[] = {"smeter_main","smeter_sub","comp","alc","po","swr","idd","vdd"};
+        for (int m = 1; m <= 8; m++) {
+            auto r = queryResult(rig_, CATCommand::getReadMeter(m));
+            j[names[m-1]] = r;
+        }
+        okJson(res, j);
     });
 
     // POST /api/meter_sw   { "meter": 1 }
@@ -1047,11 +1042,10 @@ void FTX1HttpServer::setupRoutes() {
         okJson(res, json{{"ok", true}, {"response", rig_.getLastRawResponse()}});
     });
 
-    // GET /api/raw?cmd=VE%3B   (URL-encoded semicolon)
+    // GET /api/raw?cmd=VE%3B
     svr_.Get("/api/raw", [this](const httplib::Request& req, httplib::Response& res) {
         if (!req.has_param("cmd")) { err(res, "cmd param required"); return; }
         auto cmd = req.get_param_value("cmd");
-        rig_.sendRaw(cmd);
-        okJson(res, json{{"ok", true}, {"response", rig_.getLastRawResponse()}});
+        okJson(res, queryResult(rig_, cmd));
     });
 }
