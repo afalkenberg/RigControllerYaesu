@@ -10,6 +10,7 @@
 
 #pragma once
 
+// httplib must come before windows.h to avoid winsock redefinition
 #include "httplib.h"
 #include "json.hpp"
 
@@ -511,6 +512,10 @@ public:
     // ── Raw CAT passthrough ─────────────────────────────────────────────
     bool        sendRaw(const std::string& cmd);
     std::string getLastRawResponse() const;
+
+    // ── Synchronous query — send command, wait, return raw response ──────
+    // Use this for GET endpoints that need an immediate answer.
+    std::string query(const std::string& cmd, int timeoutMs = 500);
 
 private:
     // ── Serial port ─────────────────────────────────────────────────────
