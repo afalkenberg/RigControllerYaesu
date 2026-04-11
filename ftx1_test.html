@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FTX-1 CAT Test GUI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;font-size:12px;background:#1a1a1a;color:#ccc;padding:8px}
+h1{font-size:14px;color:#e8a020;margin-bottom:6px}
+#conn{display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px;background:#222;border:1px solid #333}
+#conn input{background:#111;border:1px solid #444;color:#e8a020;padding:3px 6px;font-family:monospace;font-size:12px}
+#conn input[type=text]{width:110px}
+#conn input[type=number]{width:70px}
+button.conn{background:#1a3a1a;border:1px solid #2a5a2a;color:#4c4;padding:3px 10px;cursor:pointer;font-family:monospace;font-size:12px}
+button.conn:hover{background:#2a4a2a}
+#cstat{padding:2px 8px;font-size:11px}
+#cstat.ok{color:#4c4}
+#cstat.err{color:#c44}
+#api-base-lbl{color:#666;font-size:11px}
+/* layout */
+#main{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:6px}
+.section{background:#222;border:1px solid #333;border-radius:3px;padding:6px}
+.section h2{font-size:11px;letter-spacing:2px;color:#e8a020;margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid #333}
+.row{display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap}
+.row label{color:#999;min-width:130px;font-size:11px}
+.row input[type=text],.row input[type=number]{background:#111;border:1px solid #444;color:#aef;padding:2px 5px;font-family:monospace;font-size:11px;width:90px}
+.row input.wide{width:160px}
+.row input.narrow{width:50px}
+button.set{background:#1a2a3a;border:1px solid #2a4a6a;color:#4af;padding:2px 8px;cursor:pointer;font-family:monospace;font-size:11px;white-space:nowrap}
+button.set:hover{background:#2a3a4a}
+button.get{background:#1a1a2a;border:1px solid #2a2a4a;color:#88f;padding:2px 8px;cursor:pointer;font-family:monospace;font-size:11px;white-space:nowrap}
+button.get:hover{background:#222240}
+.resp{color:#4e4;font-size:10px;padding:1px 4px;background:#111;border:1px solid #222;min-width:60px;max-width:200px;word-break:break-all}
+.resp.err{color:#e44}
+/* response log */
+#log-wrap{margin-top:8px;background:#111;border:1px solid #333;padding:4px}
+#log-wrap h2{font-size:11px;color:#e8a020;margin-bottom:4px}
+#log{height:120px;overflow-y:auto;font-size:10px;color:#888;font-family:monospace}
+#log div{padding:1px 0;border-bottom:1px solid #1a1a1a}
+#log div.ok{color:#4e4}
+#log div.err{color:#e44}
+#log div.get{color:#88f}
+</style>
+</head>
+<body>
+<h1>FTX-1 CAT — Test GUI</h1>
+
+<!-- Connection bar -->
+<div id="conn">
+  <span style="color:#999">API:</span>
+  <input type="text" id="api-url" value="http://localhost:8080">
+  <span style="color:#999">Port:</span>
+  <input type="text" id="sport" value="COM4">
+  <span style="color:#999">Baud:</span>
+  <input type="number" id="sbaud" value="38400">
+  <button class="conn" onclick="doConnect()">CONNECT</button>
+  <button class="conn" style="background:#3a1a1a;border-color:#5a2a2a;color:#c44" onclick="doDisconnect()">DISCONNECT</button>
+  <span id="cstat" class="err">● NOT CONNECTED</span>
+</div>
+
+<div id="main">
+
+<!-- ── FREQUENCY ── -->
+<div class="section"><h2>FREQUENCY</h2>
+  <div class="row"><label>Main freq (Hz)</label><input type="number" id="f-main" value="14250000"><button class="set" onclick="post('frequency/main',{hz:+v('f-main')})">SET</button><button class="get" onclick="get('frequency/main','r-fmain')">GET</button><span class="resp" id="r-fmain"></span></div>
+  <div class="row"><label>Sub freq (Hz)</label><input type="number" id="f-sub" value="7100000"><button class="set" onclick="post('frequency/sub',{hz:+v('f-sub')})">SET</button><button class="get" onclick="get('frequency/sub','r-fsub')">GET</button><span class="resp" id="r-fsub"></span></div>
+</div>
+
+<!-- ── BAND ── -->
+<div class="section"><h2>BAND</h2>
+  <div class="row"><label>Main band</label>
+    <select id="b-main" style="background:#111;border:1px solid #444;color:#aef;padding:2px;font-family:monospace;font-size:11px">
+      <option>160m</option><option>80m</option><option>60m</option><option>40m</option><option>30m</option>
+      <option selected>20m</option><option>17m</option><option>15m</option><option>12m</option><option>10m</option>
+      <option>6m</option><option>2m</option><option>70cm</option>
+    </select>
+    <button class="set" onclick="post('band/main',{band:v('b-main')})">SET</button>
+  </div>
+  <div class="row"><label>Sub band</label>
+    <select id="b-sub" style="background:#111;border:1px solid #444;color:#aef;padding:2px;font-family:monospace;font-size:11px">
+      <option>160m</option><option>80m</option><option>60m</option><option selected>40m</option><option>30m</option>
+      <option>20m</option><option>17m</option><option>15m</option><option>12m</option><option>10m</option>
+      <option>6m</option><option>2m</option><option>70cm</option>
+    </select>
+    <button class="set" onclick="post('band/sub',{band:v('b-sub')})">SET</button>
+  </div>
+  <div class="row"><label>Band up/down</label>
+    <button class="set" onclick="post('band/up',{})">UP</button>
+    <button class="set" onclick="post('band/down',{})">DOWN</button>
+  </div>
+</div>
+
+<!-- ── MODE ── -->
+<div class="section"><h2>MODE</h2>
+  <div class="row"><label>Main mode</label>
+    <select id="m-main" style="background:#111;border:1px solid #444;color:#aef;padding:2px;font-family:monospace;font-size:11px">
+      <option>LSB</option><option selected>USB</option><option>CW</option><option>CWR</option>
+      <option>AM</option><option>FM</option><option>DATA-L</option><option>DATA-U</option><option>DATA-FM</option><option>C4FM</option>
+    </select>
+    <button class="set" onclick="post('mode/main',{mode:v('m-main')})">SET</button>
+    <button class="get" onclick="get('mode?vfo=0','r-mmode')">GET</button><span class="resp" id="r-mmode"></span>
+  </div>
+  <div class="row"><label>Sub mode</label>
+    <select id="m-sub" style="background:#111;border:1px solid #444;color:#aef;padding:2px;font-family:monospace;font-size:11px">
+      <option>LSB</option><option selected>USB</option><option>CW</option><option>CWR</option>
+      <option>AM</option><option>FM</option><option>DATA-L</option><option>DATA-U</option><option>DATA-FM</option><option>C4FM</option>
+    </select>
+    <button class="set" onclick="post('mode/sub',{mode:v('m-sub')})">SET</button>
+    <button class="get" onclick="get('mode?vfo=1','r-smode')">GET</button><span class="resp" id="r-smode"></span>
+  </div>
+</div>
+
+<!-- ── TX / PTT ── -->
+<div class="section"><h2>TX / PTT</h2>
+  <div class="row"><label>PTT</label>
+    <button class="set" onclick="post('tx',{on:true})">TX ON</button>
+    <button class="set" onclick="post('tx',{on:false})">TX OFF</button>
+    <button class="get" onclick="get('tx','r-tx')">GET</button><span class="resp" id="r-tx"></span>
+  </div>
+  <div class="row"><label>Split</label>
+    <button class="set" onclick="post('split',{on:true})">ON</button>
+    <button class="set" onclick="post('split',{on:false})">OFF</button>
+  </div>
+</div>
+
+<!-- ── RIT / XIT ── -->
+<div class="section"><h2>RIT / XIT</h2>
+  <div class="row"><label>RIT</label>
+    <button class="set" onclick="post('rit',{on:true,offset:+v('rit-off')})">ON</button>
+    <button class="set" onclick="post('rit',{on:false,offset:0})">OFF</button>
+    <button class="get" onclick="get('status','r-rit')">GET</button><span class="resp" id="r-rit"></span>
+  </div>
+  <div class="row"><label>RIT offset (Hz)</label><input type="number" id="rit-off" value="0" class="narrow"><button class="set" onclick="post('rit',{on:true,offset:+v('rit-off')})">SET</button></div>
+  <div class="row"><label>RIT clear</label><button class="set" onclick="post('rit/clear',{})">CLEAR</button></div>
+  <div class="row"><label>XIT</label>
+    <button class="set" onclick="post('xit',{on:true})">ON</button>
+    <button class="set" onclick="post('xit',{on:false})">OFF</button>
+  </div>
+</div>
+
+<!-- ── VFO OPS ── -->
+<div class="section"><h2>VFO OPERATIONS</h2>
+  <div class="row"><label>Swap VFO</label><button class="set" onclick="post('vfo/swap',{})">SWAP</button></div>
+  <div class="row"><label>Main → Sub</label><button class="set" onclick="post('vfo/main_to_sub',{})">COPY</button></div>
+  <div class="row"><label>Sub → Main</label><button class="set" onclick="post('vfo/sub_to_main',{})">COPY</button></div>
+  <div class="row"><label>Main → Mem</label><button class="set" onclick="post('vfo/main_to_mem',{})">COPY</button></div>
+  <div class="row"><label>Mem → Main</label><button class="set" onclick="post('vfo/mem_to_main',{})">COPY</button></div>
+  <div class="row"><label>Sub → Mem</label><button class="set" onclick="post('vfo/sub_to_mem',{})">COPY</button></div>
+  <div class="row"><label>Mem → Sub</label><button class="set" onclick="post('vfo/mem_to_sub',{})">COPY</button></div>
+  <div class="row"><label>VFO select (0/1)</label><input type="number" id="vfo-sel" value="0" class="narrow"><button class="set" onclick="post('vfo/select',{vfo:+v('vfo-sel')})">SET</button></div>
+  <div class="row"><label>Function TX (0/1)</label><input type="number" id="ftx" value="0" class="narrow"><button class="set" onclick="post('vfo/function_tx',{vfo:+v('ftx')})">SET</button><button class="get" onclick="get('status','r-ftx')">GET</button><span class="resp" id="r-ftx"></span></div>
+  <div class="row"><label>Function RX (0/1)</label><input type="number" id="frx" value="0" class="narrow"><button class="set" onclick="post('vfo/function_rx',{mode:+v('frx')})">SET</button></div>
+  <div class="row"><label>Fine tuning vfo/on</label><input type="number" id="ft-vfo" value="0" class="narrow"><button class="set" onclick="post('fine_tuning',{vfo:+v('ft-vfo'),on:true})">ON</button><button class="set" onclick="post('fine_tuning',{vfo:+v('ft-vfo'),on:false})">OFF</button></div>
+</div>
+
+<!-- ── AF / RF / SQ / MIC / MON ── -->
+<div class="section"><h2>GAINS</h2>
+  <div class="row"><label>AF gain main (0-255)</label><input type="number" id="af-m" value="128" class="narrow"><button class="set" onclick="post('af_gain',{vfo:0,level:+v('af-m')})">SET</button><button class="get" onclick="get('af_gain?vfo=0','r-afm')">GET</button><span class="resp" id="r-afm"></span></div>
+  <div class="row"><label>AF gain sub (0-255)</label><input type="number" id="af-s" value="128" class="narrow"><button class="set" onclick="post('af_gain',{vfo:1,level:+v('af-s')})">SET</button><button class="get" onclick="get('af_gain?vfo=1','r-afs')">GET</button><span class="resp" id="r-afs"></span></div>
+  <div class="row"><label>RF gain (0-255)</label><input type="number" id="rf-g" value="255" class="narrow"><button class="set" onclick="post('rf_gain',{level:+v('rf-g')})">SET</button><button class="get" onclick="get('status','r-rfg')">GET</button><span class="resp" id="r-rfg"></span></div>
+  <div class="row"><label>Squelch main (0-255)</label><input type="number" id="sq-m" value="0" class="narrow"><button class="set" onclick="post('squelch',{vfo:0,level:+v('sq-m')})">SET</button></div>
+  <div class="row"><label>Squelch sub (0-255)</label><input type="number" id="sq-s" value="0" class="narrow"><button class="set" onclick="post('squelch',{vfo:1,level:+v('sq-s')})">SET</button></div>
+  <div class="row"><label>Mic gain (0-100)</label><input type="number" id="mic-g" value="50" class="narrow"><button class="set" onclick="post('mic_gain',{level:+v('mic-g')})">SET</button><button class="get" onclick="get('status','r-mic')">GET</button><span class="resp" id="r-mic"></span></div>
+  <div class="row"><label>Monitor level (0-100)</label><input type="number" id="mon-l" value="0" class="narrow"><button class="set" onclick="post('monitor_level',{level:+v('mon-l')})">SET</button></div>
+  <div class="row"><label>TX power (0-100W)</label><input type="number" id="pw" value="100" class="narrow"><button class="set" onclick="post('power',{watts:+v('pw')})">SET</button><button class="get" onclick="get('status','r-pw')">GET</button><span class="resp" id="r-pw"></span></div>
+</div>
+
+<!-- ── PREAMP / ATT / AGC ── -->
+<div class="section"><h2>RF PATH — PREAMP / ATT / AGC</h2>
+  <div class="row"><label>Preamp main (0=IPO 1=AMP1 2=AMP2)</label><input type="number" id="pre-m" value="0" class="narrow"><button class="set" onclick="post('preamp',{vfo:0,level:+v('pre-m')})">SET</button></div>
+  <div class="row"><label>Preamp sub</label><input type="number" id="pre-s" value="0" class="narrow"><button class="set" onclick="post('preamp',{vfo:1,level:+v('pre-s')})">SET</button><button class="get" onclick="get('status','r-pre')">GET</button><span class="resp" id="r-pre"></span></div>
+  <div class="row"><label>ATT main on/off</label><button class="set" onclick="post('att',{vfo:0,on:true})">ON</button><button class="set" onclick="post('att',{vfo:0,on:false})">OFF</button></div>
+  <div class="row"><label>ATT sub on/off</label><button class="set" onclick="post('att',{vfo:1,on:true})">ON</button><button class="set" onclick="post('att',{vfo:1,on:false})">OFF</button></div>
+  <div class="row"><label>AGC main (0-4)</label><input type="number" id="agc-m" value="3" class="narrow"><button class="set" onclick="post('agc',{vfo:0,mode:+v('agc-m')})">SET</button><button class="get" onclick="get('agc?vfo=0','r-agcm')">GET</button><span class="resp" id="r-agcm"></span></div>
+  <div class="row"><label>AGC sub</label><input type="number" id="agc-s" value="3" class="narrow"><button class="set" onclick="post('agc',{vfo:1,mode:+v('agc-s')})">SET</button><button class="get" onclick="get('agc?vfo=1','r-agcs')">GET</button><span class="resp" id="r-agcs"></span></div>
+  <div class="row"><label>AGC fast delay (ms)</label><input type="number" id="agc-fd" value="300" class="narrow"><button class="set" onclick="post('agc/fast_delay',{ms:+v('agc-fd')})">SET</button><button class="get" onclick="get('status','r-agcfd')">GET</button><span class="resp" id="r-agcfd"></span></div>
+  <div class="row"><label>AGC mid delay (ms)</label><input type="number" id="agc-md" value="800" class="narrow"><button class="set" onclick="post('agc/mid_delay',{ms:+v('agc-md')})">SET</button></div>
+  <div class="row"><label>AGC slow delay (ms)</label><input type="number" id="agc-sd" value="1500" class="narrow"><button class="set" onclick="post('agc/slow_delay',{ms:+v('agc-sd')})">SET</button></div>
+</div>
+
+<!-- ── NB / NR / DNF / NOTCH ── -->
+<div class="section"><h2>DSP — NB / NR / DNF / NOTCH</h2>
+  <div class="row"><label>NB main</label><button class="set" onclick="post('nb',{vfo:0,on:true})">ON</button><button class="set" onclick="post('nb',{vfo:0,on:false})">OFF</button></div>
+  <div class="row"><label>NB sub</label><button class="set" onclick="post('nb',{vfo:1,on:true})">ON</button><button class="set" onclick="post('nb',{vfo:1,on:false})">OFF</button></div>
+  <div class="row"><label>NB level (1-10)</label><input type="number" id="nb-lv" value="5" class="narrow"><button class="set" onclick="post('nb/level',{level:+v('nb-lv')})">SET</button><button class="get" onclick="get('nb/level','r-nblv')">GET</button><span class="resp" id="r-nblv"></span></div>
+  <div class="row"><label>NB width (1-9)</label><input type="number" id="nb-wd" value="5" class="narrow"><button class="set" onclick="post('nb/width',{width:+v('nb-wd')})">SET</button><button class="get" onclick="get('nb/width','r-nbwd')">GET</button><span class="resp" id="r-nbwd"></span></div>
+  <div class="row"><label>NR main</label><button class="set" onclick="post('nr',{vfo:0,on:true})">ON</button><button class="set" onclick="post('nr',{vfo:0,on:false})">OFF</button></div>
+  <div class="row"><label>NR sub</label><button class="set" onclick="post('nr',{vfo:1,on:true})">ON</button><button class="set" onclick="post('nr',{vfo:1,on:false})">OFF</button></div>
+  <div class="row"><label>NR level (1-15)</label><input type="number" id="nr-lv" value="8" class="narrow"><button class="set" onclick="post('nr/level',{level:+v('nr-lv')})">SET</button><button class="get" onclick="get('nr/level','r-nrlv')">GET</button><span class="resp" id="r-nrlv"></span></div>
+  <div class="row"><label>DNF main</label><button class="set" onclick="post('dnf',{vfo:0,on:true})">ON</button><button class="set" onclick="post('dnf',{vfo:0,on:false})">OFF</button></div>
+  <div class="row"><label>DNF sub</label><button class="set" onclick="post('dnf',{vfo:1,on:true})">ON</button><button class="set" onclick="post('dnf',{vfo:1,on:false})">OFF</button></div>
+  <div class="row"><label>Notch main freq (Hz)</label><input type="number" id="nch-m" value="1000"><button class="set" onclick="post('notch',{vfo:0,on:true,freq:+v('nch-m')})">ON</button><button class="set" onclick="post('notch',{vfo:0,on:false,freq:0})">OFF</button></div>
+  <div class="row"><label>Notch sub freq (Hz)</label><input type="number" id="nch-s" value="1000"><button class="set" onclick="post('notch',{vfo:1,on:true,freq:+v('nch-s')})">ON</button><button class="set" onclick="post('notch',{vfo:1,on:false,freq:0})">OFF</button></div>
+</div>
+
+<!-- ── LOCK ── -->
+<div class="section"><h2>LOCK</h2>
+  <div class="row"><label>Lock main</label><button class="set" onclick="post('lock',{on:true})">ON</button><button class="set" onclick="post('lock',{on:false})">OFF</button><button class="get" onclick="get('status','r-lock')">GET</button><span class="resp" id="r-lock"></span></div>
+</div>
+
+<!-- ── IF FILTER ── -->
+<div class="section"><h2>IF FILTER</h2>
+  <div class="row"><label>IF shift main (Hz)</label><input type="number" id="ifs-m" value="0"><button class="set" onclick="post('if/shift',{vfo:0,offset:+v('ifs-m')})">SET</button><button class="get" onclick="get('if/shift?vfo=0','r-ifsm')">GET</button><span class="resp" id="r-ifsm"></span></div>
+  <div class="row"><label>IF shift sub (Hz)</label><input type="number" id="ifs-s" value="0"><button class="set" onclick="post('if/shift',{vfo:1,offset:+v('ifs-s')})">SET</button><button class="get" onclick="get('if/shift?vfo=1','r-ifss')">GET</button><span class="resp" id="r-ifss"></span></div>
+  <div class="row"><label>Width main (Hz)</label><input type="number" id="wid-m" value="2400"><button class="set" onclick="post('if/width',{vfo:0,hz:+v('wid-m')})">SET</button><button class="get" onclick="get('if/width?vfo=0','r-widm')">GET</button><span class="resp" id="r-widm"></span></div>
+  <div class="row"><label>Width sub (Hz)</label><input type="number" id="wid-s" value="2400"><button class="set" onclick="post('if/width',{vfo:1,hz:+v('wid-s')})">SET</button><button class="get" onclick="get('if/width?vfo=1','r-wids')">GET</button><span class="resp" id="r-wids"></span></div>
+  <div class="row"><label>Contour level (dB)</label><input type="number" id="co-lv" value="0" class="narrow"><button class="set" onclick="post('if/contour_level',{db:+v('co-lv')})">SET</button><button class="get" onclick="get('status','r-colv')">GET</button><span class="resp" id="r-colv"></span></div>
+  <div class="row"><label>Contour width (Q)</label><input type="number" id="co-wd" value="5" class="narrow"><button class="set" onclick="post('if/contour_width',{q:+v('co-wd')})">SET</button></div>
+  <div class="row"><label>IF notch width (0=N 1=W)</label><input type="number" id="nw" value="0" class="narrow"><button class="set" onclick="post('if/notch_width',{width:+v('nw')})">SET</button></div>
+  <div class="row"><label>APF width (0=N 1=M 2=W)</label><input type="number" id="apf" value="1" class="narrow"><button class="set" onclick="post('if/apf_width',{width:+v('apf')})">SET</button></div>
+</div>
+
+<!-- ── AUDIO FILTER ── -->
+<div class="section"><h2>AUDIO FILTER — LCUT / HCUT</h2>
+  <div class="row"><label>LCUT freq idx (0=OFF)</label><input type="number" id="lc-i" value="0" class="narrow"><button class="set" onclick="post('audio/lcut',{index:+v('lc-i')})">SET</button><button class="get" onclick="get('status','r-lci')">GET</button><span class="resp" id="r-lci"></span></div>
+  <div class="row"><label>LCUT slope (0=6 1=18)</label><input type="number" id="lc-s" value="0" class="narrow"><button class="set" onclick="post('audio/lcut_slope',{slope:+v('lc-s')})">SET</button></div>
+  <div class="row"><label>HCUT freq idx (0=OFF)</label><input type="number" id="hc-i" value="60" class="narrow"><button class="set" onclick="post('audio/hcut',{index:+v('hc-i')})">SET</button><button class="get" onclick="get('status','r-hci')">GET</button><span class="resp" id="r-hci"></span></div>
+  <div class="row"><label>HCUT slope (0=6 1=18)</label><input type="number" id="hc-s" value="0" class="narrow"><button class="set" onclick="post('audio/hcut_slope',{slope:+v('hc-s')})">SET</button></div>
+  <div class="row"><label>Mode for LCUT/HCUT</label>
+    <select id="af-mode" style="background:#111;border:1px solid #444;color:#aef;padding:2px;font-family:monospace;font-size:11px">
+      <option selected>USB</option><option>LSB</option><option>CW</option><option>AM</option><option>FM</option><option>DATA-L</option><option>RTTY</option>
+    </select>
+  </div>
+  <div class="row"><label>LCUT for mode idx/slope</label><input type="number" id="lcm-i" value="0" class="narrow"><input type="number" id="lcm-s" value="0" class="narrow"><button class="set" onclick="post('audio/lcut_for_mode',{mode:v('af-mode'),index:+v('lcm-i'),slope:+v('lcm-s')})">SET</button></div>
+  <div class="row"><label>HCUT for mode idx/slope</label><input type="number" id="hcm-i" value="60" class="narrow"><input type="number" id="hcm-s" value="0" class="narrow"><button class="set" onclick="post('audio/hcut_for_mode',{mode:v('af-mode'),index:+v('hcm-i'),slope:+v('hcm-s')})">SET</button></div>
+</div>
+
+<!-- ── AF TONE ── -->
+<div class="section"><h2>AF TONE (TREBLE / MID / BASS)</h2>
+  <div class="row"><label>Treble dB (-20..+10)</label><input type="number" id="at-t" value="0" class="narrow"><button class="set" onclick="post('af_tone/treble',{db:+v('at-t')})">SET</button><button class="get" onclick="get('status','r-att')">GET</button><span class="resp" id="r-att"></span></div>
+  <div class="row"><label>Mid dB</label><input type="number" id="at-m" value="0" class="narrow"><button class="set" onclick="post('af_tone/mid',{db:+v('at-m')})">SET</button></div>
+  <div class="row"><label>Bass dB</label><input type="number" id="at-b" value="0" class="narrow"><button class="set" onclick="post('af_tone/bass',{db:+v('at-b')})">SET</button></div>
+  <div class="row"><label>All tone at once</label><button class="set" onclick="post('af_tone',{treble:+v('at-t'),mid:+v('at-m'),bass:+v('at-b')})">SET ALL</button></div>
+</div>
+
+<!-- ── TX AUDIO ── -->
+<div class="section"><h2>TX AUDIO</h2>
+  <div class="row"><label>Speech proc</label><button class="set" onclick="post('tx_audio/speech_proc',{on:true})">ON</button><button class="set" onclick="post('tx_audio/speech_proc',{on:false})">OFF</button><button class="get" onclick="get('status','r-sp')">GET</button><span class="resp" id="r-sp"></span></div>
+  <div class="row"><label>AMC output (0-100)</label><input type="number" id="amc-o" value="50" class="narrow"><button class="set" onclick="post('tx_audio/amc_output',{level:+v('amc-o')})">SET</button><button class="get" onclick="get('status','r-amco')">GET</button><span class="resp" id="r-amco"></span></div>
+  <div class="row"><label>Mod source (0=MIC 1=REAR 2=USB)</label><input type="number" id="mod-s" value="0" class="narrow"><button class="set" onclick="post('tx_audio/mod_source',{src:+v('mod-s')})">SET</button></div>
+  <div class="row"><label>USB mod gain (0-100)</label><input type="number" id="usb-mg" value="50" class="narrow"><button class="set" onclick="post('tx_audio/usb_mod_gain',{gain:+v('usb-mg')})">SET</button></div>
+  <div class="row"><label>USB out level (0-100)</label><input type="number" id="usb-ol" value="50" class="narrow"><button class="set" onclick="post('tx_audio/usb_out_level',{level:+v('usb-ol')})">SET</button></div>
+  <div class="row"><label>TX BPF sel (0-4)</label><input type="number" id="tbpf" value="0" class="narrow"><button class="set" onclick="post('tx_audio/tx_bpf',{sel:+v('tbpf')})">SET</button></div>
+</div>
+
+<!-- ── PARAMETRIC EQ OFF ── -->
+<div class="section"><h2>PARAMETRIC EQ — PROC OFF</h2>
+  <div class="row" style="font-size:10px;color:#666">band / freq-idx / level-dB / bwth</div>
+  <div class="row"><label>Band 1</label><input type="number" id="eq0f" value="4" class="narrow"><input type="number" id="eq0l" value="0" class="narrow"><input type="number" id="eq0b" value="5" class="narrow"><button class="set" onclick="post('eq/off',{band:1,freq:+v('eq0f'),level:+v('eq0l'),bwth:+v('eq0b')})">SET</button></div>
+  <div class="row"><label>Band 2</label><input type="number" id="eq1f" value="10" class="narrow"><input type="number" id="eq1l" value="0" class="narrow"><input type="number" id="eq1b" value="5" class="narrow"><button class="set" onclick="post('eq/off',{band:2,freq:+v('eq1f'),level:+v('eq1l'),bwth:+v('eq1b')})">SET</button></div>
+  <div class="row"><label>Band 3</label><input type="number" id="eq2f" value="17" class="narrow"><input type="number" id="eq2l" value="0" class="narrow"><input type="number" id="eq2b" value="5" class="narrow"><button class="set" onclick="post('eq/off',{band:3,freq:+v('eq2f'),level:+v('eq2l'),bwth:+v('eq2b')})">SET</button></div>
+  <div class="row"><button class="get" onclick="get('eq/off','r-eqoff')">GET ALL</button><span class="resp wide" id="r-eqoff"></span></div>
+</div>
+
+<!-- ── PARAMETRIC EQ ON ── -->
+<div class="section"><h2>PARAMETRIC EQ — PROC ON</h2>
+  <div class="row" style="font-size:10px;color:#666">band / freq-idx / level-dB / bwth</div>
+  <div class="row"><label>Band 1</label><input type="number" id="peq0f" value="4" class="narrow"><input type="number" id="peq0l" value="0" class="narrow"><input type="number" id="peq0b" value="5" class="narrow"><button class="set" onclick="post('eq/on',{band:1,freq:+v('peq0f'),level:+v('peq0l'),bwth:+v('peq0b')})">SET</button></div>
+  <div class="row"><label>Band 2</label><input type="number" id="peq1f" value="10" class="narrow"><input type="number" id="peq1l" value="0" class="narrow"><input type="number" id="peq1b" value="5" class="narrow"><button class="set" onclick="post('eq/on',{band:2,freq:+v('peq1f'),level:+v('peq1l'),bwth:+v('peq1b')})">SET</button></div>
+  <div class="row"><label>Band 3</label><input type="number" id="peq2f" value="17" class="narrow"><input type="number" id="peq2l" value="0" class="narrow"><input type="number" id="peq2b" value="5" class="narrow"><button class="set" onclick="post('eq/on',{band:3,freq:+v('peq2f'),level:+v('peq2l'),bwth:+v('peq2b')})">SET</button></div>
+  <div class="row"><button class="get" onclick="get('eq/on','r-eqon')">GET ALL</button><span class="resp wide" id="r-eqon"></span></div>
+</div>
+
+<!-- ── VOX ── -->
+<div class="section"><h2>VOX</h2>
+  <div class="row"><label>VOX</label><button class="set" onclick="post('vox',{on:true})">ON</button><button class="set" onclick="post('vox',{on:false})">OFF</button><button class="get" onclick="get('status','r-vox')">GET</button><span class="resp" id="r-vox"></span></div>
+  <div class="row"><label>VOX gain (0-100)</label><input type="number" id="vox-g" value="50" class="narrow"><button class="set" onclick="post('vox/gain',{gain:+v('vox-g')})">SET</button></div>
+  <div class="row"><label>VOX delay code (0-30)</label><input type="number" id="vox-d" value="5" class="narrow"><button class="set" onclick="post('vox/delay',{code:+v('vox-d')})">SET</button></div>
+  <div class="row"><label>VOX select (0=MIC 1=DATA)</label><input type="number" id="vox-s" value="0" class="narrow"><button class="set" onclick="post('vox/select',{sel:+v('vox-s')})">SET</button></div>
+</div>
+
+<!-- ── TUNER ── -->
+<div class="section"><h2>ANTENNA TUNER</h2>
+  <div class="row"><label>Tuner</label><button class="set" onclick="post('tuner/start',{})">START</button><button class="set" onclick="post('tuner/stop',{})">STOP</button><button class="get" onclick="get('tuner','r-tun')">GET</button><span class="resp" id="r-tun"></span></div>
+</div>
+
+<!-- ── SCAN ── -->
+<div class="section"><h2>SCAN</h2>
+  <div class="row"><label>Scan mode (0-5)</label><input type="number" id="sc-m" value="0" class="narrow"><button class="set" onclick="post('scan',{mode:+v('sc-m')})">SET</button></div>
+  <div class="row"><label></label><button class="set" onclick="post('scan',{mode:0})">STOP</button><button class="set" onclick="post('scan',{mode:1})">UP</button><button class="set" onclick="post('scan',{mode:2})">DOWN</button></div>
+</div>
+
+<!-- ── MEMORY ── -->
+<div class="section"><h2>MEMORY CHANNEL</h2>
+  <div class="row"><label>VFO / Channel</label><input type="number" id="mc-v" value="0" class="narrow"><input type="number" id="mc-c" value="0" class="narrow"><button class="set" onclick="post('memory',{vfo:+v('mc-v'),ch:+v('mc-c')})">SET</button><button class="get" onclick="get(`memory?vfo=${v('mc-v')}&ch=${v('mc-c')}`,'r-mc')">GET</button><span class="resp" id="r-mc"></span></div>
+</div>
+
+<!-- ── CW ── -->
+<div class="section"><h2>CW</h2>
+  <div class="row"><label>Speed (WPM)</label><input type="number" id="cw-wpm" value="20" class="narrow"><button class="set" onclick="post('cw/speed',{wpm:+v('cw-wpm')})">SET</button><button class="get" onclick="get('status','r-cwwpm')">GET</button><span class="resp" id="r-cwwpm"></span></div>
+  <div class="row"><label>Pitch (Hz)</label><input type="number" id="cw-pit" value="600"><button class="set" onclick="post('cw/pitch',{hz:+v('cw-pit')})">SET</button></div>
+  <div class="row"><label>Keyer (0=OFF 1=A 2=B)</label><input type="number" id="cw-kr" value="1" class="narrow"><button class="set" onclick="post('cw/keyer',{mode:+v('cw-kr')})">SET</button></div>
+  <div class="row"><label>Break-in (0=OFF 1=SEMI 2=FULL)</label><input type="number" id="cw-bi" value="1" class="narrow"><button class="set" onclick="post('cw/break_in',{mode:+v('cw-bi')})">SET</button></div>
+  <div class="row"><label>Break-in delay (ms)</label><input type="number" id="cw-bid" value="200"><button class="set" onclick="post('cw/break_in_delay',{ms:+v('cw-bid')})">SET</button></div>
+  <div class="row"><label>CW Spot</label><button class="set" onclick="post('cw/spot',{on:true})">ON</button><button class="set" onclick="post('cw/spot',{on:false})">OFF</button></div>
+  <div class="row"><label>Zero In</label><button class="set" onclick="post('cw/zero_in',{})">ZI</button></div>
+  <div class="row"><label>Auto mode (0-2)</label><input type="number" id="cw-am" value="0" class="narrow"><button class="set" onclick="post('cw/auto_mode',{mode:+v('cw-am')})">SET</button></div>
+  <div class="row"><label>Memory ch/text</label><input type="number" id="cw-mch" value="1" class="narrow"><input type="text" id="cw-mtx" value="CQ CQ DE TEST" class="wide"><button class="set" onclick="post('cw/memory',{ch:+v('cw-mch'),text:v('cw-mtx')})">SET</button></div>
+  <div class="row"><label>Play memory ch (0=stop)</label><input type="number" id="cw-pch" value="1" class="narrow"><button class="set" onclick="post('cw/play',{ch:+v('cw-pch')})">PLAY</button><button class="set" onclick="post('cw/play',{ch:0})">STOP</button></div>
+  <div class="row"><label>Send text</label><input type="text" id="cw-txt" value="TEST" class="wide"><button class="set" onclick="post('cw/send',{text:v('cw-txt')})">SEND</button></div>
+</div>
+
+<!-- ── CTCSS ── -->
+<div class="section"><h2>CTCSS</h2>
+  <div class="row"><label>VFO / mode / tone#</label>
+    <input type="number" id="ct-v" value="0" class="narrow">
+    <input type="number" id="ct-m" value="1" class="narrow">
+    <input type="number" id="ct-t" value="8" class="narrow">
+    <button class="set" onclick="post('ctcss',{vfo:+v('ct-v'),mode:+v('ct-m'),tone:+v('ct-t')})">SET</button>
+    <button class="get" onclick="get('status','r-ct')">GET</button><span class="resp" id="r-ct"></span>
+  </div>
+</div>
+
+<!-- ── CLARIFIER ── -->
+<div class="section"><h2>CLARIFIER</h2>
+  <div class="row"><label>VFO / on / offset (Hz)</label>
+    <input type="number" id="cf-v" value="0" class="narrow">
+    <input type="number" id="cf-o" value="0"><button class="set" onclick="post('clarifier',{vfo:+v('cf-v'),on:true,offset:+v('cf-o')})">ON</button>
+    <button class="set" onclick="post('clarifier',{vfo:+v('cf-v'),on:false,offset:0})">OFF</button>
+  </div>
+</div>
+
+<!-- ── FM RPT ── -->
+<div class="section"><h2>FM REPEATER</h2>
+  <div class="row"><label>RPT shift (0=simp 1=- 2=+)</label><input type="number" id="rpt-d" value="0" class="narrow"><button class="set" onclick="post('fm/rpt_shift',{dir:+v('rpt-d')})">SET</button></div>
+  <div class="row"><label>RPT freq 144MHz (Hz)</label><input type="number" id="rpt-f1" value="600000"><button class="set" onclick="post('fm/rpt_freq',{band:144,hz:+v('rpt-f1')})">SET</button></div>
+  <div class="row"><label>RPT freq 430MHz (Hz)</label><input type="number" id="rpt-f4" value="1600000"><button class="set" onclick="post('fm/rpt_freq',{band:430,hz:+v('rpt-f4')})">SET</button></div>
+</div>
+
+<!-- ── SPECTRUM SCOPE ── -->
+<div class="section"><h2>SPECTRUM SCOPE</h2>
+  <div class="row"><label>Mode (0=OFF 1=CTR 2=FIX 3=SC-C 4=SC-F)</label><input type="number" id="sc-sc" value="0" class="narrow"><button class="set" onclick="post('scope',{mode:+v('sc-sc')})">SET</button></div>
+</div>
+
+<!-- ── METERS ── -->
+<div class="section"><h2>METERS</h2>
+  <div class="row"><label>Read all meters</label><button class="get" onclick="get('meters','r-meters')">GET ALL</button></div>
+  <div class="row"><span class="resp wide" id="r-meters" style="max-width:100%;white-space:pre-wrap"></span></div>
+  <div class="row"><label>Meter SW (1-8)</label><input type="number" id="msw" value="1" class="narrow"><button class="set" onclick="post('meter_sw',{meter:+v('msw')})">SET</button></div>
+</div>
+
+<!-- ── AUTO INFO ── -->
+<div class="section"><h2>AUTO INFORMATION</h2>
+  <div class="row"><label>AI mode (0=OFF 1=AI1 2=AI2)</label><input type="number" id="ai-m" value="2" class="narrow"><button class="set" onclick="post('ai',{mode:+v('ai-m')})">SET</button></div>
+</div>
+
+<!-- ── MISC ── -->
+<div class="section"><h2>MISC</h2>
+  <div class="row"><label>LCD dimmer type/level</label><input type="number" id="lcd-t" value="1" class="narrow"><input type="number" id="lcd-l" value="80" class="narrow"><button class="set" onclick="post('lcd',{type:+v('lcd-t'),level:+v('lcd-l')})">SET</button></div>
+  <div class="row"><label>Date/time (YYYYMMDDHHmmSS)</label><input type="text" id="dt" value="20250410120000" class="wide"><button class="set" onclick="post('datetime',{dt:v('dt')})">SET</button><button class="get" onclick="get('datetime','r-dt')">GET</button><span class="resp" id="r-dt"></span></div>
+  <div class="row"><label>Firmware version</label><button class="get" onclick="get('version','r-ver')">GET</button><span class="resp" id="r-ver"></span></div>
+  <div class="row"><label>Radio ID</label><button class="get" onclick="get('id','r-id')">GET</button><span class="resp" id="r-id"></span></div>
+  <div class="row"><label>Dial step (0-5)</label><input type="number" id="ds" value="1" class="narrow"><button class="set" onclick="post('dial_step',{step:+v('ds')})">SET</button></div>
+  <div class="row"><label>GP Out port/level</label><input type="number" id="gp-p" value="0" class="narrow"><input type="number" id="gp-l" value="1" class="narrow"><button class="set" onclick="post('gp_out',{port:+v('gp-p'),level:+v('gp-l')})">SET</button></div>
+  <div class="row"><label>TX power battery (1-12)</label><input type="number" id="tpb" value="12" class="narrow"><button class="set" onclick="post('tx_power_battery',{step:+v('tpb')})">SET</button></div>
+  <div class="row"><label>RPTT select (0=DAKY 1=RTS 2=DTR)</label><input type="number" id="rpts" value="0" class="narrow"><button class="set" onclick="post('rptt_select',{sel:+v('rpts')})">SET</button></div>
+  <div class="row"><label>Mic Up</label><button class="set" onclick="post('mic_up',{})">MIC UP</button></div>
+  <div class="row"><label>Key Down</label><button class="set" onclick="post('key_down',{})">KEY DN</button></div>
+  <div class="row"><label>Channel up/down</label><button class="set" onclick="post('channel',{dir:1})">CH UP</button><button class="set" onclick="post('channel',{dir:0})">CH DN</button></div>
+</div>
+
+<!-- ── RAW CAT ── -->
+<div class="section"><h2>RAW CAT PASSTHROUGH</h2>
+  <div class="row"><label>Command</label><input type="text" id="raw-cmd" value="VE;" class="wide" onkeydown="if(event.key==='Enter')sendRaw()"><button class="set" onclick="sendRaw()">SEND</button></div>
+  <div class="row"><span class="resp wide" id="r-raw" style="max-width:100%;font-size:11px"></span></div>
+</div>
+
+<!-- ── STATUS ── -->
+<div class="section"><h2>FULL STATUS</h2>
+  <div class="row"><button class="get" onclick="get('status','r-status')">GET STATUS</button></div>
+  <div class="row"><pre id="r-status" style="font-size:10px;color:#4e4;background:#111;padding:4px;max-height:200px;overflow-y:auto;width:100%"></pre></div>
+</div>
+
+</div><!-- /main grid -->
+
+<!-- Response log -->
+<div id="log-wrap">
+  <h2>RESPONSE LOG <button onclick="document.getElementById('log').innerHTML=''" style="background:#222;border:1px solid #333;color:#666;font-size:10px;padding:1px 6px;cursor:pointer;font-family:monospace">CLEAR</button></h2>
+  <div id="log"></div>
+</div>
+
+<script>
+let API = 'http://localhost:8080';
+
+// ── helpers ──────────────────────────────────────────────────────────────
+function v(id){ return document.getElementById(id).value; }
+
+function setResp(id, text, isErr) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'resp' + (isErr ? ' err' : '');
+}
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  const d  = document.createElement('div');
+  d.className = cls;
+  d.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+  el.insertBefore(d, el.firstChild);
+  if (el.children.length > 200) el.removeChild(el.lastChild);
+}
+
+// ── API ───────────────────────────────────────────────────────────────────
+function apiBase() { return document.getElementById('api-url').value; }
+
+async function post(endpoint, body) {
+  try {
+    const r   = await fetch(`${apiBase()}/api/${endpoint}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    log(`POST /${endpoint} ${JSON.stringify(body)} → ${JSON.stringify(j)}`, j.ok ? 'ok' : 'err');
+    return j;
+  } catch(e) {
+    log(`POST /${endpoint} FAILED: ${e.message}`, 'err');
+    return {ok: false};
+  }
+}
+
+async function get(endpoint, respId) {
+  try {
+    const r = await fetch(`${apiBase()}/api/${endpoint}`);
+    const j = await r.json();
+    const txt = typeof j === 'object' ? JSON.stringify(j, null, 2) : String(j);
+    if (respId) setResp(respId, txt.length > 120 ? txt : txt, false);
+    // For status, pretty print into pre element
+    if (endpoint === 'status' && respId === 'r-status') {
+      const pre = document.getElementById('r-status');
+      if (pre) pre.textContent = JSON.stringify(j, null, 2);
+    }
+    log(`GET  /${endpoint} → ${txt.substring(0,80)}`, 'get');
+    return j;
+  } catch(e) {
+    if (respId) setResp(respId, e.message, true);
+    log(`GET  /${endpoint} FAILED: ${e.message}`, 'err');
+    return {};
+  }
+}
+
+async function sendRaw() {
+  const cmd = v('raw-cmd');
+  const j   = await post('raw', {cmd});
+  const resp = j.response || '(no response)';
+  setResp('r-raw', `→ ${resp}`, !j.ok);
+}
+
+// ── Connect ───────────────────────────────────────────────────────────────
+async function doConnect() {
+  const j = await post('connect', {
+    port: v('sport'),
+    baud: parseInt(v('sbaud'))
+  });
+  const el = document.getElementById('cstat');
+  if (j.ok) { el.textContent = '● CONNECTED'; el.className = 'ok'; }
+  else       { el.textContent = '● FAILED';    el.className = 'err'; }
+}
+
+async function doDisconnect() {
+  await post('disconnect', {});
+  const el = document.getElementById('cstat');
+  el.textContent = '● NOT CONNECTED'; el.className = 'err';
+}
+</script>
+</body>
+</html>
