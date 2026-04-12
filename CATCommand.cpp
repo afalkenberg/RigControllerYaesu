@@ -156,8 +156,40 @@ std::string CATCommand::setMemoryChannelToSubSide()     { return "MB;"; }
 std::string CATCommand::setMemoryChannel(int vfo, int ch){ char b[10]; snprintf(b,sizeof(b),"MC%d%03d;",cat_clamp(vfo,0,1),cat_clamp(ch,0,117)); return b; }
 std::string CATCommand::getMemoryChannel(int vfo)       { char b[6];  snprintf(b,sizeof(b),"MC%d;",cat_clamp(vfo,0,1)); return b; }
 
-std::string CATCommand::setOperatingMode(int vfo, int mode){ char b[8]; snprintf(b,sizeof(b),"MD%d%d;",cat_clamp(vfo,0,1),cat_clamp(mode,0,9)); return b; }
-std::string CATCommand::getOperatingMode(int vfo)       { char b[6];  snprintf(b,sizeof(b),"MD%d;",cat_clamp(vfo,0,1)); return b; }
+// Mode code table — FTX-1 uses alphanumeric single-char codes
+// 1=LSB 2=USB 3=CW-U 4=FM 5=AM 6=RTTY-L 7=CW-L 8=DATA-L
+// 9=RTTY-U A=DATA-FM B=FM-N C=DATA-U D=AM-N E=PSK F=DATA-FM-N H=C4FM-DN I=C4FM-VW
+static const struct { const char* name; const char* code; } MODE_TABLE[] = {
+    {"LSB",      "1"}, {"USB",      "2"}, {"CW-U",     "3"}, {"CW",       "3"},
+    {"FM",       "4"}, {"AM",       "5"}, {"RTTY-L",   "6"}, {"CW-L",     "7"},
+    {"CWR",      "7"}, {"DATA-L",   "8"}, {"RTTY-U",   "9"}, {"DATA-FM",  "A"},
+    {"FM-N",     "B"}, {"DATA-U",   "C"}, {"AM-N",     "D"}, {"PSK",      "E"},
+    {"DATA-FM-N","F"}, {"C4FM-DN",  "H"}, {"C4FM-VW",  "I"}, {"C4FM",     "H"},
+    {nullptr, nullptr}
+};
+
+std::string CATCommand::modeNameToCode(const std::string& name) {
+    for (int i = 0; MODE_TABLE[i].name; i++)
+        if (name == MODE_TABLE[i].name) return MODE_TABLE[i].code;
+    return "2"; // default USB
+}
+
+std::string CATCommand::modeCodeToName(const std::string& code) {
+    for (int i = 0; MODE_TABLE[i].name; i++)
+        if (code == MODE_TABLE[i].code) return MODE_TABLE[i].name;
+    return "?";
+}
+
+std::string CATCommand::setOperatingMode(int vfo, const std::string& modeCode) {
+    char b[8]; snprintf(b,sizeof(b),"MD%d%s;",cat_clamp(vfo,0,1),modeCode.c_str());
+    return b;
+}
+std::string CATCommand::setOperatingModeByName(int vfo, const std::string& name) {
+    return setOperatingMode(vfo, modeNameToCode(name));
+}
+std::string CATCommand::getOperatingMode(int vfo) {
+    char b[6]; snprintf(b,sizeof(b),"MD%d;",cat_clamp(vfo,0,1)); return b;
+}
 
 std::string CATCommand::setMicGain(int level)           { char b[8];  snprintf(b,sizeof(b),"MG%03d;",cat_clamp(level,0,100)); return b; }
 std::string CATCommand::getMicGain()                    { return "MG;"; }
