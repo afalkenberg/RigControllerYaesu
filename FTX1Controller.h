@@ -207,8 +207,8 @@ public:
     bool getFunctionRx();
     bool setVfoOrMemoryChannel(int vfo, int mode);
     bool getVfoOrMemoryChannel(int vfo = 0);
-    bool setBandUp();
-    bool setBandDown();
+    bool setBandUp(int vfo);
+    bool setBandDown(int vfo);
 
     // ── RIT / XIT ───────────────────────────────────────────────────────
     bool setRit(bool on);
@@ -218,8 +218,8 @@ public:
     bool clearRitXit();
 
     // ── Fine tuning ─────────────────────────────────────────────────────
-    bool setFineTuning(int vfo, bool on);
-    bool getFineTuning(int vfo = 0);
+    bool setFineTuning(int on);
+    bool getFineTuning();
 
     // ── AF Gain ─────────────────────────────────────────────────────────
     bool setAfGainMain(int level);
@@ -523,7 +523,7 @@ private:
     // ── Internal helpers ────────────────────────────────────────────────
     bool        send(const std::string& cmd);
     bool        sendAndForget(const std::string& cmd); // fire & forget, no state update
-    static int  modeNameToIndex(const std::string& name);
+    std::string modeNameToIndex(const std::string& name);
     static int  hzToWidthIndex(int hz);     // 50-4000Hz → 0-79 index for SH command
 
     // ── Packet parser (AI mode push responses) ──────────────────────────

@@ -140,8 +140,12 @@ void FTX1HttpServer::setupRoutes() {
         ok(res, rig_.setSubBand(j.value("band", "40m")));
     });
 
-    svr_.Post("/api/band/up",   [this](const httplib::Request&, httplib::Response& res){ ok(res, rig_.setBandUp()); });
-    svr_.Post("/api/band/down", [this](const httplib::Request&, httplib::Response& res){ ok(res, rig_.setBandDown()); });
+    svr_.Post("/api/band/main/up",   [this](const httplib::Request&, httplib::Response& res){ ok(res, rig_.setBandUp(0)); });
+    svr_.Post("/api/band/main/down", [this](const httplib::Request&, httplib::Response& res){ ok(res, rig_.setBandDown(0)); });
+
+    svr_.Post("/api/band/sub/up", [this](const httplib::Request&, httplib::Response& res) { ok(res, rig_.setBandUp(1)); });
+    svr_.Post("/api/band/sub/down", [this](const httplib::Request&, httplib::Response& res) { ok(res, rig_.setBandDown(1)); });
+
 
     // ====================================================================
     //  MODE
@@ -271,7 +275,7 @@ void FTX1HttpServer::setupRoutes() {
     // POST /api/fine_tuning   { "vfo": 0, "on": true }
     svr_.Post("/api/fine_tuning", [this](const httplib::Request& req, httplib::Response& res) {
         auto j = parseBody(req);
-        ok(res, rig_.setFineTuning(j.value("vfo", 0), j.value("on", false)));
+        ok(res, rig_.setFineTuning(j.value("mode", 0)));
     });
 
     // ====================================================================

@@ -82,13 +82,13 @@ bool FTX1Controller::sendAndForget(const std::string& cmd) {
     return serialWrite(cmd);
 }
 
-int FTX1Controller::modeNameToIndex(const std::string& name) {
-    if (name=="LSB")     return 0; if (name=="USB")     return 1;
-    if (name=="CW")      return 2; if (name=="CWR")     return 3;
-    if (name=="AM")      return 4; if (name=="FM")       return 5;
-    if (name=="DATA-L")  return 6; if (name=="DATA-U")  return 7;
-    if (name=="DATA-FM") return 8; if (name=="C4FM")    return 9;
-    return 1;
+std::string FTX1Controller::modeNameToIndex(const std::string& name) {
+    if (name=="LSB")     return "1"; if (name=="USB")     return "2";
+    if (name=="CW-U")    return "3"; if (name=="CW-L")     return "7";
+    if (name=="AM")      return "5"; if (name=="FM")       return "4";
+    if (name=="DATA-L")  return "8"; if (name=="DATA-U")  return "C";
+    if (name=="DATA-FM") return "A"; if (name=="C4FM-DN")    return "H";
+    return "0";
 }
 
 int FTX1Controller::hzToWidthIndex(int hz) {
@@ -498,8 +498,8 @@ bool FTX1Controller::setFunctionRx(int m)           { std::lock_guard<std::mutex
 bool FTX1Controller::getFunctionRx()                { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::getFunctionRx()); }
 bool FTX1Controller::setVfoOrMemoryChannel(int v,int m){ std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::setVfoOrMemoryChannel(v,m)); }
 bool FTX1Controller::getVfoOrMemoryChannel(int v)   { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::getVfoOrMemoryChannel(v)); }
-bool FTX1Controller::setBandUp()                    { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::setBandUp()); }
-bool FTX1Controller::setBandDown()                  { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::setBandDown()); }
+bool FTX1Controller::setBandUp(int v)                    { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::setBandUp(v)); }
+bool FTX1Controller::setBandDown(int v)                  { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::setBandDown(v)); }
 
 // ============================================================================
 //  RIT / XIT
@@ -525,12 +525,12 @@ bool FTX1Controller::clearRitXit()       { std::lock_guard<std::mutex> lk(mx_); 
 // ============================================================================
 //  Fine tuning
 // ============================================================================
-bool FTX1Controller::setFineTuning(int vfo, bool on) {
+bool FTX1Controller::setFineTuning(int mode) {
     std::lock_guard<std::mutex> lk(mx_);
-    if (vfo==0) state_.fineTuning = on;
-    return send(CATCommand::setFineTuning(vfo, on));
+    state_.fineTuning = mode;
+    return send(CATCommand::setFineTuning(mode));
 }
-bool FTX1Controller::getFineTuning(int vfo) { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::getFineTuning(vfo)); }
+bool FTX1Controller::getFineTuning() { std::lock_guard<std::mutex> lk(mx_); return send(CATCommand::getFineTuning()); }
 
 // ============================================================================
 //  Gains

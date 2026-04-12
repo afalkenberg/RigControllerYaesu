@@ -85,9 +85,13 @@ button.get:hover{background:#222240}
     <button class="set" onclick="post('band/sub',{band:v('b-sub')})">SET</button>
   </div>
   <div class="row"><label>Band up/down</label>
-    <button class="set" onclick="post('band/up',{})">UP</button>
-    <button class="set" onclick="post('band/down',{})">DOWN</button>
+    <button class="set" onclick="post('band/main/up',{})">UP</button>
+    <button class="set" onclick="post('band/main/down',{})">DOWN</button>
   </div>
+  <div class="row"><label>Sub up/down</label>
+    <button class="set" onclick="post('band/sub/up',{})">UP</button>
+    <button class="set" onclick="post('band/sub/down', {})">DOWN</button>
+   </div>
 </div>
 
 <!-- ── MODE ── -->
@@ -150,7 +154,12 @@ button.get:hover{background:#222240}
   <div class="row"><label>VFO select (0/1)</label><input type="number" id="vfo-sel" value="0" class="narrow"><button class="set" onclick="post('vfo/select',{vfo:+v('vfo-sel')})">SET</button></div>
   <div class="row"><label>Function TX (0/1)</label><input type="number" id="ftx" value="0" class="narrow"><button class="set" onclick="post('vfo/function_tx',{vfo:+v('ftx')})">SET</button><button class="get" onclick="get('status','r-ftx')">GET</button><span class="resp" id="r-ftx"></span></div>
   <div class="row"><label>Function RX (0/1)</label><input type="number" id="frx" value="0" class="narrow"><button class="set" onclick="post('vfo/function_rx',{mode:+v('frx')})">SET</button></div>
-  <div class="row"><label>Fine tuning vfo/on</label><input type="number" id="ft-vfo" value="0" class="narrow"><button class="set" onclick="post('fine_tuning',{vfo:+v('ft-vfo'),on:true})">ON</button><button class="set" onclick="post('fine_tuning',{vfo:+v('ft-vfo'),on:false})">OFF</button></div>
+  <div class="row">
+      <label>Fine tuning</label>
+      <button class="set" onclick="post('fine_tuning', {mode:0})">NORMAL</button>
+      <button class="set" onclick="post('fine_tuning', {mode:1})">FINE</button>
+      <button class="set" onclick="post('fine_tuning', {mode:2})">FAST</button>
+  </div>
 </div>
 
 <!-- ── AF / RF / SQ / MIC / MON ── -->

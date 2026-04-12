@@ -118,7 +118,7 @@ public:
     static std::string getSubSideFrequency();
 
     // FN — Fine Tuning  (toggles MAIN VFO fine step — no VFO selector)
-    static std::string setFineTuning(bool on);
+    static std::string setFineTuning(int mode);
     static std::string getFineTuning();
 
     // FR — Function RX  mode: 0=single 1=dual

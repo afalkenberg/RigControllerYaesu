@@ -37,7 +37,7 @@ std::string CATCommand::setSubSideToMainSide()          { return "BA;"; }
 std::string CATCommand::setAutoNotch(int vfo, bool on)  { char b[8];  snprintf(b,sizeof(b),"BC%d%d;",cat_clamp(vfo,0,1),on?1:0); return b; }
 std::string CATCommand::getAutoNotch(int vfo)           { char b[6];  snprintf(b,sizeof(b),"BC%d;",cat_clamp(vfo,0,1)); return b; }
 
-std::string CATCommand::setBandDown()                   { return "BD0;"; }
+std::string CATCommand::setBandDown(int vfo)            { char b[6];  snprintf(b, sizeof(b), "BD%d;", cat_clamp(vfo, 0, 1)); return b; }
 
 std::string CATCommand::setBreakIn(int mode)            { char b[6];  snprintf(b,sizeof(b),"BI%d;",cat_clamp(mode,0,2)); return b; }
 std::string CATCommand::getBreakIn()                    { return "BI;"; }
@@ -51,7 +51,8 @@ std::string CATCommand::setManualNotch(bool on, int freqHz) {
 std::string CATCommand::getManualNotch()                { return "BP;"; }
 
 std::string CATCommand::setBandSelect(int band)         { char b[8];  snprintf(b,sizeof(b),"BS%02d;",cat_clamp(band,0,12)); return b; }
-std::string CATCommand::setBandUp()                     { return "BU0;"; }
+
+std::string CATCommand::setBandUp(int vfo)              { char b[6];  snprintf(b, sizeof(b), "BU%d;", cat_clamp(vfo, 0, 1)); return b; }
 
 std::string CATCommand::setClarifier(int vfo, bool on, int offsetHz) {
     offsetHz = cat_clamp(offsetHz,-9999,9999);
@@ -101,8 +102,8 @@ std::string CATCommand::getMainSideFrequency()          { return "FA;"; }
 std::string CATCommand::setSubSideFrequency(long long freqHz)  { char b[16]; snprintf(b,sizeof(b),"FB%09lld;",freqHz); return b; }
 std::string CATCommand::getSubSideFrequency()           { return "FB;"; }
 
-std::string CATCommand::setFineTuning(int vfo, bool on) { char b[8];  snprintf(b,sizeof(b),"FN%d%d;",cat_clamp(vfo,0,1),on?1:0); return b; }
-std::string CATCommand::getFineTuning(int vfo)          { char b[6];  snprintf(b,sizeof(b),"FN%d;",cat_clamp(vfo,0,1)); return b; }
+std::string CATCommand::setFineTuning(int mode) { char b[8];  snprintf(b,sizeof(b),"FN%d;", cat_clamp(mode,0,2)); return b; }
+std::string CATCommand::getFineTuning()        { return "FN;"; }
 
 std::string CATCommand::setFunctionRx(int mode)         { char b[6];  snprintf(b,sizeof(b),"FR%d;",cat_clamp(mode,0,1)); return b; }
 std::string CATCommand::getFunctionRx()                 { return "FR;"; }
@@ -145,7 +146,7 @@ std::string CATCommand::getKeySpeed()                   { return "KS;"; }
 std::string CATCommand::setCwKeyingMemoryPlay(int ch)   { char b[6];  snprintf(b,sizeof(b),"KY%d;",cat_clamp(ch,0,5)); return b; }
 std::string CATCommand::setCwKeyingText(const std::string& text) { return "KY " + text + ";"; }
 
-std::string CATCommand::setLock(bool on, int type)      { char b[8];  snprintf(b,sizeof(b),"LK%d%d;",on?1:0,cat_clamp(type,0,1)); return b; }
+std::string CATCommand::setLock(bool on)                { char b[8];  snprintf(b,sizeof(b),"LK%d;",on?1:0); return b; }
 std::string CATCommand::getLock()                       { return "LK;"; }
 
 std::string CATCommand::setLoadMessage(int type, int ch){ char b[8];  snprintf(b,sizeof(b),"LM%d%d;",cat_clamp(type,0,1),cat_clamp(ch,1,5)); return b; }
