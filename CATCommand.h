@@ -51,8 +51,8 @@ public:
     static std::string setAutoNotch(int vfo, bool on);
     static std::string getAutoNotch(int vfo = 0);
 
-    // BD — Band Down
-    static std::string setBandDown();
+    // BD — Band Down  vfo: 0=MAIN 1=SUB
+    static std::string setBandDown(int vfo = 0);
 
     // BI — Break-In  mode: 0=OFF 1=SEMI 2=FULL
     static std::string setBreakIn(int mode);
@@ -68,8 +68,8 @@ public:
     // BS — Band Select  band: 0=160m .. 12=70cm
     static std::string setBandSelect(int band);
 
-    // BU — Band Up
-    static std::string setBandUp();
+    // BU — Band Up  vfo: 0=MAIN 1=SUB
+    static std::string setBandUp(int vfo = 0);
 
     // CF — Clarifier  vfo: 0=MAIN 1=SUB  offsetHz: -9999..+9999
     static std::string setClarifier(int vfo, bool on, int offsetHz = 0);
@@ -117,9 +117,9 @@ public:
     static std::string setSubSideFrequency(long long freqHz);
     static std::string getSubSideFrequency();
 
-    // FN — Fine Tuning  vfo: 0=MAIN 1=SUB
-    static std::string setFineTuning(int vfo, bool on);
-    static std::string getFineTuning(int vfo = 0);
+    // FN — Fine Tuning  (toggles MAIN VFO fine step — no VFO selector)
+    static std::string setFineTuning(bool on);
+    static std::string getFineTuning();
 
     // FR — Function RX  mode: 0=single 1=dual
     static std::string setFunctionRx(int mode);
@@ -167,8 +167,8 @@ public:
     static std::string setCwKeyingMemoryPlay(int ch);
     static std::string setCwKeyingText(const std::string& text);
 
-    // LK — Lock  type: 0=MAIN 1=MAIN+SUB
-    static std::string setLock(bool on, int type = 0);
+    // LK — Lock  (locks MAIN dial)
+    static std::string setLock(bool on);
     static std::string getLock();
 
     // LM — Load Message  type: 0=RX 1=TX  ch: 1-5
@@ -185,9 +185,19 @@ public:
     static std::string getMemoryChannel(int vfo = 0);
 
     // MD — Operating Mode  vfo: 0=MAIN 1=SUB
-    // mode: 0=LSB 1=USB 2=CW 3=CW-R 4=AM 5=FM 6=DATA-L 7=DATA-U 8=DATA-FM 9=C4FM
-    static std::string setOperatingMode(int vfo, int mode);
+    // mode codes: 1=LSB 2=USB 3=CW-U 4=FM 5=AM 6=RTTY-L 7=CW-L
+    //             8=DATA-L 9=RTTY-U A=DATA-FM B=FM-N C=DATA-U
+    //             D=AM-N E=PSK F=DATA-FM-N H=C4FM-DN I=C4FM-VW
+    static std::string setOperatingMode(int vfo, const std::string& modeCode);
     static std::string getOperatingMode(int vfo = 0);
+
+    // Convenience: set by human-readable name
+    static std::string setOperatingModeByName(int vfo, const std::string& name);
+
+    // Map mode name → CAT code character  e.g. "USB" → "2"
+    static std::string modeNameToCode(const std::string& name);
+    // Map CAT code → mode name  e.g. "2" → "USB"
+    static std::string modeCodeToName(const std::string& code);
 
     // MG — Mic Gain  level: 0-100
     static std::string setMicGain(int level);
@@ -498,6 +508,6 @@ public:
     // Parse TX response → true if transmitting
     static bool parseTx(const std::string& r);
 
-    // Map mode index to name string
+    // Map mode index to name string (legacy integer index, kept for compatibility)
     static const char* modeName(int idx);
 };
